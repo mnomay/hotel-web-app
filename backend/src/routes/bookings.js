@@ -1,5 +1,10 @@
 import { Router } from 'express';
-import { createBooking } from '../services/bookings.js';
+import {
+  cancelBooking,
+  createBooking,
+  getBookingByConfirmationCode,
+  updateDinnerPlans,
+} from '../services/bookings.js';
 import { isValidDateOnly, toDateOnly } from '../utils/dates.js';
 
 const router = Router();
@@ -9,6 +14,18 @@ const isNonEmptyString = (value) =>
 
 const isNonNegativeInt = (value) =>
   Number.isInteger(value) && value >= 0;
+
+const sendServiceError = (res, error, fallbackMessage) => {
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({
+      message: error.message,
+      code: error.code,
+    });
+  }
+
+  console.error(error);
+  return res.status(500).json({ message: fallbackMessage });
+};
 
 router.post('/', async (req, res) => {
   try {
@@ -93,15 +110,35 @@ router.post('/', async (req, res) => {
 
     return res.status(201).json(booking);
   } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-    }
+    return sendServiceError(res, error, 'Failed to create booking');
+  }
+});
 
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to create booking' });
+router.get('/:confirmationCode', async (req, res) => {
+  try {
+    const booking = await getBookingByConfirmationCode(req.params.confirmationCode);
+    return res.json(booking);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to load booking');
+  }
+});
+
+router.post('/:confirmationCode/cancel', async (req, res) => {
+  try {
+    const booking = await cancelBooking(req.params.confirmationCode);
+    return res.json(booking);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to cancel booking');
+  }
+});
+
+router.put('/:confirmationCode/dinners', async (req, res) => {
+  try {
+    const dinners = req.body?.dinners;
+    const booking = await updateDinnerPlans(req.params.confirmationCode, dinners);
+    return res.json(booking);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to update dinner plans');
   }
 });
 

@@ -1,5 +1,5 @@
 import prisma from '../db/prisma.js';
-import { eachNight, formatDateOnly, toDateOnly } from '../utils/dates.js';
+import { eachNight, formatDateOnly, isValidDateOnly, toDateOnly } from '../utils/dates.js';
 import { generateConfirmationCode } from '../utils/confirmationCode.js';
 
 const overlappingConfirmedFilter = (checkIn, checkOut) => ({
@@ -169,3 +169,161 @@ export const serializeBooking = (booking) => ({
     wantsDinner: plan.wantsDinner,
   })),
 });
+
+const bookingInclude = {
+  room: {
+    select: {
+      id: true,
+      name: true,
+      capacity: true,
+    },
+  },
+  dinnerPlans: {
+    orderBy: { day: 'asc' },
+  },
+};
+
+const normalizeConfirmationCode = (code) =>
+  String(code || '')
+    .trim()
+    .toUpperCase();
+
+const httpError = (statusCode, code, message) => {
+  const error = new Error(message);
+  error.statusCode = statusCode;
+  error.code = code;
+  return error;
+};
+
+const todayUtcDateOnly = () => {
+  const now = new Date();
+  return formatDateOnly(
+    new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate())),
+  );
+};
+
+export const getBookingByConfirmationCode = async (confirmationCode) => {
+  const code = normalizeConfirmationCode(confirmationCode);
+
+  const booking = await prisma.booking.findUnique({
+    where: { confirmationCode: code },
+    include: bookingInclude,
+  });
+
+  if (!booking) {
+    throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
+  }
+
+  return serializeBooking(booking);
+};
+
+export const cancelBooking = async (confirmationCode) => {
+  const code = normalizeConfirmationCode(confirmationCode);
+
+  const booking = await prisma.booking.findUnique({
+    where: { confirmationCode: code },
+  });
+
+  if (!booking) {
+    throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
+  }
+
+  if (booking.status === 'cancelled') {
+    throw httpError(409, 'ALREADY_CANCELLED', 'Booking is already cancelled');
+  }
+
+  const updated = await prisma.booking.update({
+    where: { confirmationCode: code },
+    data: { status: 'cancelled' },
+    include: bookingInclude,
+  });
+
+  return serializeBooking(updated);
+};
+
+export const updateDinnerPlans = async (confirmationCode, dinners) => {
+  const code = normalizeConfirmationCode(confirmationCode);
+
+  const booking = await prisma.booking.findUnique({
+    where: { confirmationCode: code },
+    include: bookingInclude,
+  });
+
+  if (!booking) {
+    throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
+  }
+
+  if (booking.status === 'cancelled') {
+    throw httpError(
+      409,
+      'BOOKING_CANCELLED',
+      'Cannot update dinners for a cancelled booking',
+    );
+  }
+
+  const today = todayUtcDateOnly();
+  const checkOut = formatDateOnly(booking.checkOut);
+
+  if (today >= checkOut) {
+    throw httpError(
+      409,
+      'STAY_ENDED',
+      'Cannot update dinners after the stay has ended',
+    );
+  }
+
+  if (!Array.isArray(dinners) || dinners.length === 0) {
+    throw httpError(
+      400,
+      'INVALID_DINNERS',
+      'dinners must be a non-empty array of { day, wantsDinner }',
+    );
+  }
+
+  const existingByDay = new Map(
+    booking.dinnerPlans.map((plan) => [formatDateOnly(plan.day), plan]),
+  );
+
+  const updates = [];
+
+  for (const item of dinners) {
+    if (!item || !isValidDateOnly(item.day) || typeof item.wantsDinner !== 'boolean') {
+      throw httpError(
+        400,
+        'INVALID_DINNERS',
+        'Each dinner entry needs day (YYYY-MM-DD) and wantsDinner (boolean)',
+      );
+    }
+
+    if (!existingByDay.has(item.day)) {
+      throw httpError(
+        400,
+        'INVALID_DINNER_DAY',
+        `Day ${item.day} is not part of this booking`,
+      );
+    }
+
+    updates.push({ day: item.day, wantsDinner: item.wantsDinner });
+  }
+
+  await prisma.$transaction(
+    updates.map((item) =>
+      prisma.dinnerPlan.update({
+        where: {
+          bookingId_day: {
+            bookingId: booking.id,
+            day: toDateOnly(item.day),
+          },
+        },
+        data: { wantsDinner: item.wantsDinner },
+      }),
+    ),
+  );
+
+  const refreshed = await prisma.booking.findUnique({
+    where: { confirmationCode: code },
+    include: bookingInclude,
+  });
+
+  return serializeBooking(refreshed);
+};
