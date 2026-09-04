@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Link, Navigate, useNavigate } from 'react-router-dom';
 import { adminLogin } from '../../api/client';
+import PasswordField from '../../components/PasswordField';
 import { useToast } from '../../components/ToastProvider';
 import { useAdminAuth } from '../../admin/AdminAuthContext';
 
@@ -66,19 +67,13 @@ function AdminLoginPage() {
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-gray-900 focus:bg-white"
               />
             </label>
-            <label className="block">
-              <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-                Password
-              </span>
-              <input
-                required
-                type="password"
-                autoComplete="current-password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm outline-none focus:border-gray-900 focus:bg-white"
-              />
-            </label>
+            <PasswordField
+              label="Password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
             <button type="submit" disabled={submitting} className="btn-primary">
               {submitting ? 'Signing in…' : 'Sign in'}
             </button>

@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { getAdminOverview } from '../services/adminOverview.js';
 import { getAdminDinnerSchedule } from '../services/adminDinners.js';
+import { getAdminReviews } from '../services/adminReviews.js';
 import {
   cancelBooking,
   checkInBooking,
@@ -41,6 +42,18 @@ router.get('/dinners', async (_req, res) => {
     return res.json(schedule);
   } catch (error) {
     return sendServiceError(res, error, 'Failed to load dinner schedule');
+  }
+});
+
+router.get('/reviews', async (req, res) => {
+  try {
+    const sort = req.query.sort ? String(req.query.sort) : 'latest';
+    const from = req.query.from ? String(req.query.from) : undefined;
+    const to = req.query.to ? String(req.query.to) : undefined;
+    const reviews = await getAdminReviews({ sort, from, to });
+    return res.json(reviews);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to load reviews');
   }
 });
 

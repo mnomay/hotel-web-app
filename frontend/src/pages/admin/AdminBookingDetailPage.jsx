@@ -264,7 +264,7 @@ function AdminBookingDetailPage() {
                   type="button"
                   disabled={statusBusy || !actionDate}
                   onClick={handleCheckOut}
-                  className="inline-flex w-full items-center justify-center rounded-xl border border-gray-900 bg-gray-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[140px]"
+                  className="btn-primary sm:w-auto sm:min-w-[140px]"
                 >
                   {statusBusy ? 'Saving…' : 'Mark checked out'}
                 </button>

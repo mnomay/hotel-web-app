@@ -86,6 +86,12 @@ export const adminLogout = () =>
 
 export const getAdminMe = () => request('/api/admin/me');
 
+export const changeAdminPassword = (currentPassword, newPassword) =>
+  request('/api/admin/change-password', {
+    method: 'POST',
+    body: JSON.stringify({ currentPassword, newPassword }),
+  });
+
 export const getAdminOverview = (from, to) =>
   request(
     `/api/admin/overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
@@ -120,3 +126,11 @@ export const checkOutAdminBooking = (confirmationCode, date) =>
   });
 
 export const getAdminDinners = () => request('/api/admin/dinners');
+
+export const getAdminReviews = ({ sort = 'latest', from = '', to = '' } = {}) => {
+  const params = new URLSearchParams();
+  params.set('sort', sort);
+  if (from) params.set('from', from);
+  if (to) params.set('to', to);
+  return request(`/api/admin/reviews?${params.toString()}`);
+};

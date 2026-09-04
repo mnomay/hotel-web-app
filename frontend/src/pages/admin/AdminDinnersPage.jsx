@@ -86,7 +86,7 @@ function AdminDinnersPage() {
   }, [showToast]);
 
   return (
-    <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
+    <main className="mx-auto max-w-6xl px-3 py-6 sm:px-6 sm:py-10">
       <h1 className="text-2xl font-semibold text-gray-900">Dinner schedule</h1>
       <p className="mt-1 text-sm text-gray-500">
         Headcount for tonight and tomorrow from active bookings.

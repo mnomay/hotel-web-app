@@ -69,11 +69,8 @@ async function main() {
   const roomsByName = Object.fromEntries(rooms.map((room) => [room.name, room]));
   const passwordHash = await bcrypt.hash('admin123', 10);
 
-  await prisma.adminUser.createMany({
-    data: [
-      { email: 'admin@hotel.local', passwordHash },
-      { email: 'manager@hotel.local', passwordHash },
-    ],
+  await prisma.adminUser.create({
+    data: { email: 'admin@hotel.local', passwordHash },
   });
 
   const pastCheckIn = formatDate(addDays(today, -10));
@@ -234,9 +231,7 @@ async function main() {
   }
 
   console.log('Seed completed successfully');
-  console.log(
-    'Admin logins: admin@hotel.local / admin123, manager@hotel.local / admin123',
-  );
+  console.log('Admin login: admin@hotel.local / admin123');
 }
 
 main()

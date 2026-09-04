@@ -67,4 +67,63 @@ router.get('/me', requireAdmin, (req, res) => {
   });
 });
 
+router.post('/change-password', requireAdmin, async (req, res) => {
+  try {
+    const currentPassword = String(req.body?.currentPassword || '');
+    const newPassword = String(req.body?.newPassword || '');
+
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: 'Current password and new password are required',
+        code: 'INVALID_PASSWORD',
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        message: 'New password must be at least 8 characters',
+        code: 'WEAK_PASSWORD',
+      });
+    }
+
+    if (currentPassword === newPassword) {
+      return res.status(400).json({
+        message: 'New password must be different from the current password',
+        code: 'SAME_PASSWORD',
+      });
+    }
+
+    const admin = await prisma.adminUser.findUnique({
+      where: { id: req.admin.id },
+    });
+
+    if (!admin) {
+      return res.status(401).json({
+        message: 'Authentication required',
+        code: 'UNAUTHORIZED',
+      });
+    }
+
+    const matches = await bcrypt.compare(currentPassword, admin.passwordHash);
+
+    if (!matches) {
+      return res.status(401).json({
+        message: 'Current password is incorrect',
+        code: 'INVALID_PASSWORD',
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+    await prisma.adminUser.update({
+      where: { id: admin.id },
+      data: { passwordHash },
+    });
+
+    return res.json({ ok: true });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ message: 'Failed to change password' });
+  }
+});
+
 export default router;
