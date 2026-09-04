@@ -7,6 +7,7 @@ import roomsRouter from './routes/rooms.js';
 import bookingsRouter from './routes/bookings.js';
 import reviewsRouter from './routes/reviews.js';
 import adminAuthRouter from './routes/adminAuth.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 
@@ -31,6 +32,7 @@ app.use('/api/rooms', roomsRouter);
 app.use('/api/bookings', bookingsRouter);
 app.use('/api/reviews', reviewsRouter);
 app.use('/api/admin', adminAuthRouter);
+app.use('/api/admin', adminRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);

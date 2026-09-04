@@ -48,10 +48,7 @@ function AdminShell() {
     return <Navigate to="/admin/login" replace />;
   }
 
-  const initials = admin.email
-    .split('@')[0]
-    .slice(0, 2)
-    .toUpperCase();
+  const initials = admin.email.split('@')[0].slice(0, 2).toUpperCase();
 
   const handleLogout = async () => {
     setMenuOpen(false);
@@ -62,105 +59,34 @@ function AdminShell() {
   return (
     <div className="min-h-screen bg-gray-50">
       <header className="sticky top-0 z-40 border-b border-gray-200 bg-white">
-        <div className="mx-auto max-w-6xl px-3 sm:px-6">
-          <div className="flex h-14 items-center justify-between gap-3 sm:hidden">
+        <div className="mx-auto flex max-w-6xl flex-col gap-2 px-3 py-2.5 sm:h-16 sm:flex-row sm:items-center sm:gap-4 sm:px-6 sm:py-0">
+          <div className="flex items-center justify-between gap-3 sm:contents">
             <Link
               to="/"
-              className="truncate text-base font-bold tracking-tight text-[#ff385c]"
+              className="shrink-0 truncate text-base font-bold tracking-tight text-[#ff385c] sm:w-auto sm:flex-1 sm:text-xl"
             >
               Willow House
             </Link>
 
-            <div className="relative shrink-0" ref={menuRef}>
+            <div className="relative shrink-0 sm:order-last sm:flex-1 sm:flex sm:justify-end" ref={menuRef}>
               <button
                 type="button"
                 aria-expanded={menuOpen}
                 aria-haspopup="menu"
                 onClick={() => setMenuOpen((open) => !open)}
-                className="flex max-w-[9.5rem] items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100"
+                className="flex max-w-[9.5rem] items-center gap-1.5 rounded-full py-1 pl-1 pr-2 transition hover:bg-gray-100 sm:max-w-[16rem] sm:gap-2 sm:pr-2.5"
               >
                 <span
                   aria-hidden="true"
-                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white"
+                  className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-gray-900 text-xs font-semibold text-white sm:h-9 sm:w-9 sm:text-sm"
                 >
                   {initials}
                 </span>
-                <span className="min-w-0 truncate text-xs text-gray-600">
-                  {admin.email}
-                </span>
-              </button>
-
-              {menuOpen ? (
-                <div
-                  role="menu"
-                  className="absolute right-0 mt-2 w-44 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
-                >
-                  <button
-                    type="button"
-                    role="menuitem"
-                    onClick={handleLogout}
-                    className="block w-full px-3 py-2.5 text-left text-sm font-medium text-gray-800 hover:bg-gray-50"
-                  >
-                    Log out
-                  </button>
-                </div>
-              ) : null}
-            </div>
-          </div>
-
-          <nav className="-mx-1 flex items-center justify-center gap-0.5 pb-2.5 sm:hidden">
-            <NavLink to="/admin" end className={navClass}>
-              Overview
-            </NavLink>
-            <NavLink to="/admin/dinners" className={navClass}>
-              Dinners
-            </NavLink>
-            <NavLink to="/admin/reviews" className={navClass}>
-              Reviews
-            </NavLink>
-          </nav>
-
-          <div className="hidden h-16 grid-cols-[minmax(0,1fr)_auto_minmax(0,1fr)] items-center gap-4 sm:grid">
-            <div className="min-w-0 justify-self-start">
-              <Link
-                to="/"
-                className="block truncate text-xl font-bold tracking-tight text-[#ff385c]"
-              >
-                Willow House
-              </Link>
-            </div>
-
-            <nav className="flex items-center justify-center gap-1">
-              <NavLink to="/admin" end className={navClass}>
-                Overview
-              </NavLink>
-              <NavLink to="/admin/dinners" className={navClass}>
-                Dinners
-              </NavLink>
-              <NavLink to="/admin/reviews" className={navClass}>
-                Reviews
-              </NavLink>
-            </nav>
-
-            <div className="relative justify-self-end" ref={desktopMenuRef}>
-              <button
-                type="button"
-                aria-expanded={menuOpen}
-                aria-haspopup="menu"
-                onClick={() => setMenuOpen((open) => !open)}
-                className="flex max-w-[16rem] items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition hover:bg-gray-100"
-              >
-                <span
-                  aria-hidden="true"
-                  className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gray-900 text-sm font-semibold text-white"
-                >
-                  {initials}
-                </span>
-                <span className="min-w-0 truncate text-sm text-gray-600">
+                <span className="min-w-0 truncate text-xs text-gray-600 sm:text-sm">
                   {admin.email}
                 </span>
                 <svg
-                  className={`h-4 w-4 shrink-0 text-gray-400 transition ${menuOpen ? 'rotate-180' : ''}`}
+                  className={`h-3.5 w-3.5 shrink-0 text-gray-400 transition sm:h-4 sm:w-4 ${menuOpen ? 'rotate-180' : ''}`}
                   viewBox="0 0 20 20"
                   fill="currentColor"
                   aria-hidden="true"
@@ -176,7 +102,7 @@ function AdminShell() {
               {menuOpen ? (
                 <div
                   role="menu"
-                  className="absolute right-0 mt-2 w-44 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
+                  className="absolute right-0 z-50 mt-2 w-44 overflow-hidden rounded-xl border border-gray-200 bg-white py-1 shadow-lg"
                 >
                   <button
                     type="button"
@@ -190,6 +116,18 @@ function AdminShell() {
               ) : null}
             </div>
           </div>
+
+          <nav className="flex items-center justify-center gap-0.5 sm:gap-1">
+            <NavLink to="/admin" end className={navClass}>
+              Overview
+            </NavLink>
+            <NavLink to="/admin/dinners" className={navClass}>
+              Dinners
+            </NavLink>
+            <NavLink to="/admin/reviews" className={navClass}>
+              Reviews
+            </NavLink>
+          </nav>
         </div>
       </header>
       <Outlet />

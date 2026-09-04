@@ -85,3 +85,19 @@ export const adminLogout = () =>
   });
 
 export const getAdminMe = () => request('/api/admin/me');
+
+export const getAdminOverview = (from, to) =>
+  request(
+    `/api/admin/overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`,
+  );
+
+export const getAdminBooking = (confirmationCode) => {
+  const code = String(confirmationCode || '').trim();
+  if (!code) {
+    const error = new Error('Confirmation code required');
+    error.statusCode = 400;
+    return Promise.reject(error);
+  }
+
+  return request(`/api/admin/bookings/${encodeURIComponent(code)}`);
+};

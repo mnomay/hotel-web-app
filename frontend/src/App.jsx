@@ -7,6 +7,7 @@ import ManagePage from './pages/ManagePage';
 import ReviewPage from './pages/ReviewPage';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminBookingDetailPage from './pages/admin/AdminBookingDetailPage';
 import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
 import AdminShell from './pages/admin/AdminShell';
 
@@ -33,6 +34,7 @@ function App() {
             <Route path="login" element={<AdminLoginPage />} />
             <Route element={<AdminShell />}>
               <Route index element={<AdminHomePage />} />
+              <Route path="bookings/:confirmationCode" element={<AdminBookingDetailPage />} />
               <Route
                 path="dinners"
                 element={
