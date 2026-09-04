@@ -13,7 +13,11 @@ async function request(path, options = {}) {
     try {
       data = JSON.parse(text);
     } catch {
-      data = { message: text };
+      if (text.includes('<!DOCTYPE') || text.includes('Cannot GET')) {
+        data = { message: 'Booking not found' };
+      } else {
+        data = { message: text };
+      }
     }
   }
 
@@ -37,4 +41,27 @@ export const createBooking = (payload) =>
   request('/api/bookings', {
     method: 'POST',
     body: JSON.stringify(payload),
+  });
+
+export const getBooking = (confirmationCode) => {
+  const code = String(confirmationCode || '').trim();
+  if (!code) {
+    const error = new Error('Enter a confirmation code');
+    error.status = 400;
+    error.code = 'INVALID_CODE';
+    return Promise.reject(error);
+  }
+
+  return request(`/api/bookings/${encodeURIComponent(code)}`);
+};
+
+export const cancelBooking = (confirmationCode) =>
+  request(`/api/bookings/${encodeURIComponent(confirmationCode)}/cancel`, {
+    method: 'POST',
+  });
+
+export const updateDinners = (confirmationCode, dinners) =>
+  request(`/api/bookings/${encodeURIComponent(confirmationCode)}/dinners`, {
+    method: 'PUT',
+    body: JSON.stringify({ dinners }),
   });

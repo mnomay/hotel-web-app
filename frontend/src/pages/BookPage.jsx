@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createBooking, getAvailability } from '../api/client';
+import { useToast } from '../components/ToastProvider';
 import { getRoomImage } from '../data/roomImages';
 import { addDaysIso, formatDisplayDate, todayIso } from '../utils/dates';
 import { formatMoney } from '../utils/money';
@@ -55,6 +56,7 @@ function BookingModal({
   onClose,
   onBooked,
 }) {
+  const { showToast } = useToast();
   const [modalStep, setModalStep] = useState(1);
   const [adults, setAdults] = useState(1);
   const [children, setChildren] = useState(0);
@@ -62,7 +64,6 @@ function BookingModal({
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
 
   const occupancy = adults + children;
   const overCapacity = occupancy > room.capacity;
@@ -86,7 +87,6 @@ function BookingModal({
     event.preventDefault();
     if (overCapacity || adults < 1) return;
 
-    setError('');
     setLoading(true);
 
     try {
@@ -100,9 +100,10 @@ function BookingModal({
         guestName,
         guestEmail,
       });
+      showToast('Booking confirmed');
       onBooked(booking);
     } catch (err) {
-      setError(err.message || 'Could not complete booking');
+      showToast(err.message || 'Could not complete booking', 'error');
     } finally {
       setLoading(false);
     }
@@ -156,12 +157,6 @@ function BookingModal({
             />
           </div>
           <h3 className="mt-4 text-xl font-semibold text-gray-900">{room.name}</h3>
-
-          {error ? (
-            <p className="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">
-              {error}
-            </p>
-          ) : null}
 
           {modalStep === 1 ? (
             <>
@@ -290,6 +285,7 @@ function BookingModal({
 }
 
 function BookPage() {
+  const { showToast } = useToast();
   const minCheckIn = todayIso();
   const [checkIn, setCheckIn] = useState(minCheckIn);
   const [checkOut, setCheckOut] = useState(addDaysIso(minCheckIn, 2));
@@ -300,7 +296,6 @@ function BookPage() {
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [confirmation, setConfirmation] = useState(null);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState('');
   const [showResults, setShowResults] = useState(false);
 
   const resetFlow = () => {
@@ -311,12 +306,10 @@ function BookPage() {
     setResultNights(0);
     setSelectedRoom(null);
     setConfirmation(null);
-    setError('');
   };
 
   const searchRooms = async (event) => {
     event.preventDefault();
-    setError('');
     setLoading(true);
     setSelectedRoom(null);
     setConfirmation(null);
@@ -329,7 +322,7 @@ function BookPage() {
       setResultNights(data.nights);
       setShowResults(true);
     } catch (err) {
-      setError(err.message || 'Could not load available rooms');
+      showToast(err.message || 'Could not load available rooms', 'error');
     } finally {
       setLoading(false);
     }
@@ -385,12 +378,6 @@ function BookPage() {
         </div>
       </form>
 
-      {error ? (
-        <p className="mx-auto mt-6 max-w-3xl rounded-xl border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700">
-          {error}
-        </p>
-      ) : null}
-
       {showResults && !confirmation ? (
         <section className="mt-12">
           <div className="mb-6">
@@ -442,7 +429,6 @@ function BookPage() {
                       type="button"
                       onClick={() => {
                         setSelectedRoom(room);
-                        setError('');
                       }}
                       className="btn-primary mt-4"
                     >

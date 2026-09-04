@@ -2,8 +2,8 @@ import prisma from '../db/prisma.js';
 import { eachNight, formatDateOnly, isValidDateOnly, toDateOnly } from '../utils/dates.js';
 import { generateConfirmationCode } from '../utils/confirmationCode.js';
 
-const overlappingConfirmedFilter = (checkIn, checkOut) => ({
-  status: 'confirmed',
+const overlappingActiveFilter = (checkIn, checkOut) => ({
+  status: { in: ['confirmed', 'checked_in'] },
   checkIn: { lt: toDateOnly(checkOut) },
   checkOut: { gt: toDateOnly(checkIn) },
 });
@@ -12,7 +12,7 @@ export const findAvailableRooms = async (checkIn, checkOut) => {
   const rooms = await prisma.room.findMany({
     where: {
       bookings: {
-        none: overlappingConfirmedFilter(checkIn, checkOut),
+        none: overlappingActiveFilter(checkIn, checkOut),
       },
     },
     orderBy: { pricePerNight: 'asc' },
@@ -35,7 +35,7 @@ export const isRoomAvailable = async (roomId, checkIn, checkOut) => {
   const conflict = await prisma.booking.findFirst({
     where: {
       roomId,
-      ...overlappingConfirmedFilter(checkIn, checkOut),
+      ...overlappingActiveFilter(checkIn, checkOut),
     },
     select: { id: true },
   });
@@ -228,8 +228,14 @@ export const cancelBooking = async (confirmationCode) => {
     throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
   }
 
-  if (booking.status === 'cancelled') {
-    throw httpError(409, 'ALREADY_CANCELLED', 'Booking is already cancelled');
+  if (booking.status !== 'confirmed') {
+    throw httpError(
+      409,
+      'CANCEL_NOT_ALLOWED',
+      booking.status === 'cancelled'
+        ? 'Booking is already cancelled'
+        : 'Only confirmed bookings that have not checked in can be cancelled',
+    );
   }
 
   const updated = await prisma.booking.update({
@@ -253,12 +259,18 @@ export const updateDinnerPlans = async (confirmationCode, dinners) => {
     throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
   }
 
-  if (booking.status === 'cancelled') {
+  if (booking.status === 'cancelled' || booking.status === 'checked_out') {
     throw httpError(
       409,
-      'BOOKING_CANCELLED',
-      'Cannot update dinners for a cancelled booking',
+      'DINNERS_LOCKED',
+      booking.status === 'cancelled'
+        ? 'Cannot update dinners for a cancelled booking'
+        : 'Cannot update dinners after checkout',
     );
+  }
+
+  if (!['confirmed', 'checked_in'].includes(booking.status)) {
+    throw httpError(409, 'DINNERS_LOCKED', 'Cannot update dinners for this booking');
   }
 
   const today = todayUtcDateOnly();

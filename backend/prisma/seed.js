@@ -96,7 +96,7 @@ async function main() {
       infants: 0,
       guestName: 'Alex Rivera',
       guestEmail: 'alex.rivera@example.com',
-      status: 'confirmed',
+      status: 'checked_out',
       dinners: {
         [pastCheckIn]: true,
         [formatDate(addDays(today, -9))]: true,
@@ -119,7 +119,7 @@ async function main() {
       infants: 0,
       guestName: 'Jordan Lee',
       guestEmail: 'jordan.lee@example.com',
-      status: 'confirmed',
+      status: 'checked_in',
       dinners: {
         [currentCheckIn]: true,
         [formatDate(today)]: true,
@@ -183,7 +183,7 @@ async function main() {
         dinnerPlans: {
           create: nights.map((night) => ({
             day: toDateOnly(night),
-            wantsDinner: Boolean(booking.dinners[night]),
+            wantsDinner: Boolean(booking.dinners?.[night]),
           })),
         },
         ...(booking.review

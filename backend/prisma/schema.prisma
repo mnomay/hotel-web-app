@@ -9,6 +9,8 @@ datasource db {
 
 enum BookingStatus {
   confirmed
+  checked_in
+  checked_out
   cancelled
 }
 
