@@ -101,3 +101,22 @@ export const getAdminBooking = (confirmationCode) => {
 
   return request(`/api/admin/bookings/${encodeURIComponent(code)}`);
 };
+
+export const cancelAdminBooking = (confirmationCode) =>
+  request(`/api/admin/bookings/${encodeURIComponent(confirmationCode)}/cancel`, {
+    method: 'POST',
+  });
+
+export const checkInAdminBooking = (confirmationCode, date) =>
+  request(`/api/admin/bookings/${encodeURIComponent(confirmationCode)}/check-in`, {
+    method: 'POST',
+    body: JSON.stringify({ date }),
+  });
+
+export const checkOutAdminBooking = (confirmationCode, date) =>
+  request(`/api/admin/bookings/${encodeURIComponent(confirmationCode)}/check-out`, {
+    method: 'POST',
+    body: JSON.stringify({ date }),
+  });
+
+export const getAdminDinners = () => request('/api/admin/dinners');

@@ -1,11 +1,28 @@
 import { Router } from 'express';
 import { requireAdmin } from '../middleware/requireAdmin.js';
 import { getAdminOverview } from '../services/adminOverview.js';
-import { getBookingByConfirmationCode } from '../services/bookings.js';
+import { getAdminDinnerSchedule } from '../services/adminDinners.js';
+import {
+  cancelBooking,
+  checkInBooking,
+  checkOutBooking,
+  getBookingByConfirmationCode,
+} from '../services/bookings.js';
 
 const router = Router();
 
 router.use(requireAdmin);
+
+const sendServiceError = (res, error, fallbackMessage) => {
+  if (error.statusCode) {
+    return res.status(error.statusCode).json({
+      message: error.message,
+      code: error.code,
+    });
+  }
+  console.error(error);
+  return res.status(500).json({ message: fallbackMessage });
+};
 
 router.get('/overview', async (req, res) => {
   try {
@@ -14,14 +31,16 @@ router.get('/overview', async (req, res) => {
     const overview = await getAdminOverview(from, to);
     return res.json(overview);
   } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-    }
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to load overview' });
+    return sendServiceError(res, error, 'Failed to load overview');
+  }
+});
+
+router.get('/dinners', async (_req, res) => {
+  try {
+    const schedule = await getAdminDinnerSchedule();
+    return res.json(schedule);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to load dinner schedule');
   }
 });
 
@@ -30,14 +49,36 @@ router.get('/bookings/:confirmationCode', async (req, res) => {
     const booking = await getBookingByConfirmationCode(req.params.confirmationCode);
     return res.json(booking);
   } catch (error) {
-    if (error.statusCode) {
-      return res.status(error.statusCode).json({
-        message: error.message,
-        code: error.code,
-      });
-    }
-    console.error(error);
-    return res.status(500).json({ message: 'Failed to load booking' });
+    return sendServiceError(res, error, 'Failed to load booking');
+  }
+});
+
+router.post('/bookings/:confirmationCode/cancel', async (req, res) => {
+  try {
+    const booking = await cancelBooking(req.params.confirmationCode);
+    return res.json(booking);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to cancel booking');
+  }
+});
+
+router.post('/bookings/:confirmationCode/check-in', async (req, res) => {
+  try {
+    const date = req.body?.date ? String(req.body.date) : undefined;
+    const booking = await checkInBooking(req.params.confirmationCode, date);
+    return res.json(booking);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to check in booking');
+  }
+});
+
+router.post('/bookings/:confirmationCode/check-out', async (req, res) => {
+  try {
+    const date = req.body?.date ? String(req.body.date) : undefined;
+    const booking = await checkOutBooking(req.params.confirmationCode, date);
+    return res.json(booking);
+  } catch (error) {
+    return sendServiceError(res, error, 'Failed to check out booking');
   }
 });
 

@@ -157,6 +157,8 @@ export const serializeBooking = (booking) => ({
   guestName: booking.guestName,
   guestEmail: booking.guestEmail,
   status: booking.status,
+  checkedInAt: booking.checkedInAt ? formatDateOnly(booking.checkedInAt) : null,
+  checkedOutAt: booking.checkedOutAt ? formatDateOnly(booking.checkedOutAt) : null,
   room: booking.room
     ? {
         id: booking.room.id,
@@ -241,6 +243,95 @@ export const cancelBooking = async (confirmationCode) => {
   const updated = await prisma.booking.update({
     where: { confirmationCode: code },
     data: { status: 'cancelled' },
+    include: bookingInclude,
+  });
+
+  return serializeBooking(updated);
+};
+
+export const checkInBooking = async (confirmationCode, dateInput) => {
+  const code = normalizeConfirmationCode(confirmationCode);
+  const date = dateInput || todayUtcDateOnly();
+
+  if (!isValidDateOnly(date)) {
+    throw httpError(400, 'INVALID_DATE', 'checkedInAt must be YYYY-MM-DD');
+  }
+
+  const booking = await prisma.booking.findUnique({
+    where: { confirmationCode: code },
+  });
+
+  if (!booking) {
+    throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
+  }
+
+  if (booking.status !== 'confirmed') {
+    throw httpError(
+      409,
+      'CHECKIN_NOT_ALLOWED',
+      booking.status === 'checked_in'
+        ? 'Guest is already checked in'
+        : 'Only confirmed bookings can be checked in',
+    );
+  }
+
+  const updated = await prisma.booking.update({
+    where: { confirmationCode: code },
+    data: {
+      status: 'checked_in',
+      checkedInAt: toDateOnly(date),
+      checkedOutAt: null,
+    },
+    include: bookingInclude,
+  });
+
+  return serializeBooking(updated);
+};
+
+export const checkOutBooking = async (confirmationCode, dateInput) => {
+  const code = normalizeConfirmationCode(confirmationCode);
+  const date = dateInput || todayUtcDateOnly();
+
+  if (!isValidDateOnly(date)) {
+    throw httpError(400, 'INVALID_DATE', 'checkedOutAt must be YYYY-MM-DD');
+  }
+
+  const booking = await prisma.booking.findUnique({
+    where: { confirmationCode: code },
+  });
+
+  if (!booking) {
+    throw httpError(404, 'BOOKING_NOT_FOUND', 'Booking not found');
+  }
+
+  if (booking.status !== 'checked_in') {
+    throw httpError(
+      409,
+      'CHECKOUT_NOT_ALLOWED',
+      booking.status === 'checked_out'
+        ? 'Guest is already checked out'
+        : 'Only checked-in bookings can be checked out',
+    );
+  }
+
+  const checkedInAt = booking.checkedInAt
+    ? formatDateOnly(booking.checkedInAt)
+    : null;
+
+  if (checkedInAt && date < checkedInAt) {
+    throw httpError(
+      400,
+      'INVALID_CHECKOUT_DATE',
+      'Checkout date cannot be before the check-in date',
+    );
+  }
+
+  const updated = await prisma.booking.update({
+    where: { confirmationCode: code },
+    data: {
+      status: 'checked_out',
+      checkedOutAt: toDateOnly(date),
+    },
     include: bookingInclude,
   });
 

@@ -86,6 +86,8 @@ hotel-web-app/
 - Admin auth uses JWT stored in an **httpOnly cookie** (`hotel_admin_token`). Frontend calls use `credentials: 'include'`.
 - Seeded confirmation codes for demos: `HTL-PAST01` (checked out, already reviewed), `HTL-DONE01` (checked out, ready for review), `HTL-NOW001` (checked in), `HTL-FUTR01` (confirmed), `HTL-CANC01` (cancelled).
 - Booking statuses: `confirmed` → `checked_in` → `checked_out`, or `cancelled` before check-in. Guest cancel is only allowed while `confirmed`.
+- Admin dinner headcount for a day = **adults + children** on active (`confirmed` / `checked_in`) bookings with dinner that night (infants excluded).
+- Only **admins** can mark check-in / check-out. Actual dates are stored as `checked_in_at` / `checked_out_at` (date-only). Planned stay dates remain `check_in` / `check_out`.
 
 ### Schema relationships
 

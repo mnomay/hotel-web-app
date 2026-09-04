@@ -8,6 +8,7 @@ import ReviewPage from './pages/ReviewPage';
 import AdminHomePage from './pages/admin/AdminHomePage';
 import AdminLoginPage from './pages/admin/AdminLoginPage';
 import AdminBookingDetailPage from './pages/admin/AdminBookingDetailPage';
+import AdminDinnersPage from './pages/admin/AdminDinnersPage';
 import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
 import AdminShell from './pages/admin/AdminShell';
 
@@ -35,15 +36,7 @@ function App() {
             <Route element={<AdminShell />}>
               <Route index element={<AdminHomePage />} />
               <Route path="bookings/:confirmationCode" element={<AdminBookingDetailPage />} />
-              <Route
-                path="dinners"
-                element={
-                  <AdminPlaceholderPage
-                    title="Dinner schedule"
-                    body="Today and tomorrow dinner counts come in a later step."
-                  />
-                }
-              />
+              <Route path="dinners" element={<AdminDinnersPage />} />
               <Route
                 path="reviews"
                 element={

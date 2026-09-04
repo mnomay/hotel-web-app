@@ -40,6 +40,8 @@ model Booking {
   guestName        String        @map("guest_name")
   guestEmail       String        @map("guest_email")
   status           BookingStatus @default(confirmed)
+  checkedInAt      DateTime?     @map("checked_in_at") @db.Date
+  checkedOutAt     DateTime?     @map("checked_out_at") @db.Date
   createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
 
   room        Room          @relation(fields: [roomId], references: [id])

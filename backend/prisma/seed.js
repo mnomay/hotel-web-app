@@ -99,6 +99,8 @@ async function main() {
       guestName: 'Alex Rivera',
       guestEmail: 'alex.rivera@example.com',
       status: 'checked_out',
+      checkedInAt: pastCheckIn,
+      checkedOutAt: pastCheckOut,
       dinners: {
         [pastCheckIn]: true,
         [formatDate(addDays(today, -9))]: true,
@@ -122,6 +124,8 @@ async function main() {
       guestName: 'Morgan Blake',
       guestEmail: 'morgan.blake@example.com',
       status: 'checked_out',
+      checkedInAt: reviewReadyCheckIn,
+      checkedOutAt: reviewReadyCheckOut,
       dinners: {
         [reviewReadyCheckIn]: false,
         [formatDate(addDays(today, -19))]: true,
@@ -139,6 +143,7 @@ async function main() {
       guestName: 'Jordan Lee',
       guestEmail: 'jordan.lee@example.com',
       status: 'checked_in',
+      checkedInAt: currentCheckIn,
       dinners: {
         [currentCheckIn]: true,
         [formatDate(today)]: true,
@@ -199,6 +204,12 @@ async function main() {
         guestName: booking.guestName,
         guestEmail: booking.guestEmail,
         status: booking.status,
+        checkedInAt: booking.checkedInAt
+          ? toDateOnly(booking.checkedInAt)
+          : null,
+        checkedOutAt: booking.checkedOutAt
+          ? toDateOnly(booking.checkedOutAt)
+          : null,
         dinnerPlans: {
           create: nights.map((night) => ({
             day: toDateOnly(night),

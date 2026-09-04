@@ -1,8 +1,13 @@
 import { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { getAdminBooking } from '../../api/client';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import {
+  cancelAdminBooking,
+  checkInAdminBooking,
+  checkOutAdminBooking,
+  getAdminBooking,
+} from '../../api/client';
 import { useToast } from '../../components/ToastProvider';
-import { formatDisplayDate } from '../../utils/dates';
+import { formatDisplayDate, todayIso } from '../../utils/dates';
 import { formatMoney } from '../../utils/money';
 
 const STATUS_PILL = {
@@ -13,9 +18,7 @@ const STATUS_PILL = {
 };
 
 function guestSummary(booking) {
-  const parts = [
-    `${booking.adults} adult${booking.adults === 1 ? '' : 's'}`,
-  ];
+  const parts = [`${booking.adults} adult${booking.adults === 1 ? '' : 's'}`];
   if (booking.children > 0) {
     parts.push(
       `${booking.children} child${booking.children === 1 ? '' : 'ren'}`,
@@ -31,9 +34,13 @@ function guestSummary(booking) {
 
 function AdminBookingDetailPage() {
   const { confirmationCode } = useParams();
+  const navigate = useNavigate();
   const { showToast } = useToast();
   const [booking, setBooking] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [cancelling, setCancelling] = useState(false);
+  const [statusBusy, setStatusBusy] = useState(false);
+  const [actionDate, setActionDate] = useState(() => todayIso());
 
   useEffect(() => {
     let active = true;
@@ -41,7 +48,10 @@ function AdminBookingDetailPage() {
 
     getAdminBooking(confirmationCode)
       .then((data) => {
-        if (active) setBooking(data);
+        if (active) {
+          setBooking(data);
+          setActionDate(todayIso());
+        }
       })
       .catch((err) => {
         if (active) {
@@ -57,6 +67,57 @@ function AdminBookingDetailPage() {
       active = false;
     };
   }, [confirmationCode, showToast]);
+
+  const handleCancel = async () => {
+    if (!booking || booking.status !== 'confirmed') return;
+    if (
+      !window.confirm(
+        `Cancel booking ${booking.confirmationCode}? The room will become available again.`,
+      )
+    ) {
+      return;
+    }
+
+    setCancelling(true);
+    try {
+      const updated = await cancelAdminBooking(booking.confirmationCode);
+      setBooking(updated);
+      showToast('Booking cancelled');
+      navigate('/admin', { replace: false });
+    } catch (err) {
+      showToast(err.message || 'Cancel failed', 'error');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
+  const handleCheckIn = async () => {
+    if (!booking || booking.status !== 'confirmed') return;
+    setStatusBusy(true);
+    try {
+      const updated = await checkInAdminBooking(booking.confirmationCode, actionDate);
+      setBooking(updated);
+      showToast(`Checked in on ${formatDisplayDate(actionDate)}`);
+    } catch (err) {
+      showToast(err.message || 'Check-in failed', 'error');
+    } finally {
+      setStatusBusy(false);
+    }
+  };
+
+  const handleCheckOut = async () => {
+    if (!booking || booking.status !== 'checked_in') return;
+    setStatusBusy(true);
+    try {
+      const updated = await checkOutAdminBooking(booking.confirmationCode, actionDate);
+      setBooking(updated);
+      showToast(`Checked out on ${formatDisplayDate(actionDate)}`);
+    } catch (err) {
+      showToast(err.message || 'Check-out failed', 'error');
+    } finally {
+      setStatusBusy(false);
+    }
+  };
 
   if (loading) {
     return (
@@ -77,7 +138,10 @@ function AdminBookingDetailPage() {
     );
   }
 
-  const dinnerCount = (booking.dinnerPlans || []).filter((d) => d.wantsDinner).length;
+  const canCancel = booking.status === 'confirmed';
+  const canCheckIn = booking.status === 'confirmed';
+  const canCheckOut = booking.status === 'checked_in';
+  const dinnerPlans = booking.dinnerPlans || [];
 
   return (
     <main className="mx-auto max-w-3xl px-4 py-6 sm:px-6 sm:py-10">
@@ -121,15 +185,35 @@ function AdminBookingDetailPage() {
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Check-in
+              Planned check-in
             </dt>
             <dd className="mt-1 text-gray-900">{formatDisplayDate(booking.checkIn)}</dd>
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Check-out
+              Planned check-out
             </dt>
             <dd className="mt-1 text-gray-900">{formatDisplayDate(booking.checkOut)}</dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Actually checked in
+            </dt>
+            <dd className="mt-1 text-gray-900">
+              {booking.checkedInAt
+                ? formatDisplayDate(booking.checkedInAt)
+                : '—'}
+            </dd>
+          </div>
+          <div>
+            <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">
+              Actually checked out
+            </dt>
+            <dd className="mt-1 text-gray-900">
+              {booking.checkedOutAt
+                ? formatDisplayDate(booking.checkedOutAt)
+                : '—'}
+            </dd>
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">
@@ -139,17 +223,101 @@ function AdminBookingDetailPage() {
           </div>
           <div>
             <dt className="text-xs font-semibold uppercase tracking-wide text-gray-400">
-              Dinner nights
+              Nights
             </dt>
-            <dd className="mt-1 text-gray-900">
-              {dinnerCount} of {(booking.dinnerPlans || []).length}
-            </dd>
+            <dd className="mt-1 text-gray-900">{booking.nights}</dd>
           </div>
         </dl>
 
-        <p className="mt-6 rounded-2xl bg-gray-50 px-4 py-3 text-sm text-gray-500">
-          Admin cancel actions arrive in the next step.
-        </p>
+        {(canCheckIn || canCheckOut) && (
+          <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
+            <h2 className="text-sm font-semibold text-gray-900">
+              {canCheckIn ? 'Check in guest' : 'Check out guest'}
+            </h2>
+            <p className="mt-1 text-xs text-gray-500">
+              Choose the date this action happened. Defaults to today.
+            </p>
+            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+              <label className="block flex-1">
+                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+                  Date
+                </span>
+                <input
+                  type="date"
+                  required
+                  value={actionDate}
+                  onChange={(e) => setActionDate(e.target.value)}
+                  className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-900"
+                />
+              </label>
+              {canCheckIn ? (
+                <button
+                  type="button"
+                  disabled={statusBusy || !actionDate}
+                  onClick={handleCheckIn}
+                  className="btn-primary sm:w-auto sm:min-w-[140px]"
+                >
+                  {statusBusy ? 'Saving…' : 'Mark checked in'}
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={statusBusy || !actionDate}
+                  onClick={handleCheckOut}
+                  className="inline-flex w-full items-center justify-center rounded-xl border border-gray-900 bg-gray-900 px-5 py-3.5 text-sm font-semibold text-white transition hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto sm:min-w-[140px]"
+                >
+                  {statusBusy ? 'Saving…' : 'Mark checked out'}
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
+        <div className="mt-6">
+          <h2 className="text-sm font-semibold text-gray-900">Dinner plans</h2>
+          {dinnerPlans.length === 0 ? (
+            <p className="mt-2 text-sm text-gray-500">No dinner nights on this stay.</p>
+          ) : (
+            <ul className="mt-3 divide-y divide-gray-100 rounded-2xl border border-gray-100">
+              {dinnerPlans.map((plan) => (
+                <li
+                  key={plan.day}
+                  className="flex items-center justify-between gap-3 px-4 py-3 text-sm"
+                >
+                  <span className="text-gray-700">{formatDisplayDate(plan.day)}</span>
+                  <span
+                    className={
+                      plan.wantsDinner
+                        ? 'font-medium text-emerald-700'
+                        : 'text-gray-400'
+                    }
+                  >
+                    {plan.wantsDinner ? 'Dinner' : 'No dinner'}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="mt-6 border-t border-gray-100 pt-5">
+          {canCancel ? (
+            <button
+              type="button"
+              disabled={cancelling || statusBusy}
+              onClick={handleCancel}
+              className="w-full rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm font-semibold text-rose-800 transition hover:bg-rose-100 disabled:opacity-60 sm:w-auto"
+            >
+              {cancelling ? 'Cancelling…' : 'Cancel booking'}
+            </button>
+          ) : (
+            <p className="text-sm text-gray-500">
+              {booking.status === 'cancelled'
+                ? 'This booking is already cancelled.'
+                : 'Only confirmed bookings (not yet checked in) can be cancelled.'}
+            </p>
+          )}
+        </div>
       </div>
     </main>
   );
