@@ -2,6 +2,8 @@ import cors from 'cors';
 import express from 'express';
 import env from './config/env.js';
 import healthRouter from './routes/health.js';
+import roomsRouter from './routes/rooms.js';
+import bookingsRouter from './routes/bookings.js';
 
 const app = express();
 
@@ -16,6 +18,8 @@ app.get('/', (_req, res) => {
 });
 
 app.use('/api/health', healthRouter);
+app.use('/api/rooms', roomsRouter);
+app.use('/api/bookings', bookingsRouter);
 
 app.use((err, _req, res, _next) => {
   console.error(err);
