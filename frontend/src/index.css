@@ -2,7 +2,58 @@
 @tailwind components;
 @tailwind utilities;
 
-body {
-  margin: 0;
-  min-height: 100vh;
+@layer base {
+  html {
+    scroll-behavior: smooth;
+  }
+
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background-color: #ffffff;
+    color: #222222;
+    font-family: "DM Sans", ui-sans-serif, system-ui, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  input[type='date'] {
+    color-scheme: light;
+    font-family: inherit;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator {
+    cursor: pointer;
+    opacity: 0.65;
+    padding: 4px;
+    border-radius: 8px;
+  }
+
+  input[type='date']::-webkit-calendar-picker-indicator:hover {
+    opacity: 1;
+    background-color: #f3f4f6;
+  }
+}
+
+@layer components {
+  .btn-primary {
+    @apply inline-flex w-full items-center justify-center rounded-xl px-5 py-3.5 text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-60;
+    background-color: #ff385c;
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    background-color: #d90b3e;
+  }
+
+  .date-field {
+    @apply flex w-full flex-col rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 transition;
+  }
+
+  .date-field:focus-within {
+    @apply border-gray-900 bg-white shadow-sm;
+  }
+
+  .date-field input[type='date'] {
+    @apply mt-1 w-full border-0 bg-transparent p-0 text-base font-medium text-gray-900 outline-none;
+    min-height: 1.75rem;
+  }
 }
