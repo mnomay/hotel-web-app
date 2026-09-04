@@ -1,9 +1,22 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Outlet, Route, Routes } from 'react-router-dom';
+import { AdminAuthProvider } from './admin/AdminAuthContext';
 import { ToastProvider } from './components/ToastProvider';
 import PublicLayout from './components/layout/PublicLayout';
 import BookPage from './pages/BookPage';
 import ManagePage from './pages/ManagePage';
 import ReviewPage from './pages/ReviewPage';
+import AdminHomePage from './pages/admin/AdminHomePage';
+import AdminLoginPage from './pages/admin/AdminLoginPage';
+import AdminPlaceholderPage from './pages/admin/AdminPlaceholderPage';
+import AdminShell from './pages/admin/AdminShell';
+
+function AdminAuthLayout() {
+  return (
+    <AdminAuthProvider>
+      <Outlet />
+    </AdminAuthProvider>
+  );
+}
 
 function App() {
   return (
@@ -14,8 +27,34 @@ function App() {
             <Route index element={<BookPage />} />
             <Route path="manage" element={<ManagePage />} />
             <Route path="review" element={<ReviewPage />} />
-            <Route path="*" element={<Navigate to="/" replace />} />
           </Route>
+
+          <Route path="/admin" element={<AdminAuthLayout />}>
+            <Route path="login" element={<AdminLoginPage />} />
+            <Route element={<AdminShell />}>
+              <Route index element={<AdminHomePage />} />
+              <Route
+                path="dinners"
+                element={
+                  <AdminPlaceholderPage
+                    title="Dinner schedule"
+                    body="Today and tomorrow dinner counts come in a later step."
+                  />
+                }
+              />
+              <Route
+                path="reviews"
+                element={
+                  <AdminPlaceholderPage
+                    title="Reviews"
+                    body="Admin review filters come in a later step."
+                  />
+                }
+              />
+            </Route>
+          </Route>
+
+          <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
       </BrowserRouter>
     </ToastProvider>

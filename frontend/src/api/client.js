@@ -1,5 +1,6 @@
 async function request(path, options = {}) {
   const response = await fetch(path, {
+    credentials: 'include',
     headers: {
       'Content-Type': 'application/json',
       ...(options.headers || {}),
@@ -71,3 +72,16 @@ export const createReview = (payload) =>
     method: 'POST',
     body: JSON.stringify(payload),
   });
+
+export const adminLogin = (email, password) =>
+  request('/api/admin/login', {
+    method: 'POST',
+    body: JSON.stringify({ email, password }),
+  });
+
+export const adminLogout = () =>
+  request('/api/admin/logout', {
+    method: 'POST',
+  });
+
+export const getAdminMe = () => request('/api/admin/me');
