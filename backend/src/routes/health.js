@@ -1,11 +1,11 @@
 import { Router } from 'express';
-import pool from '../db/pool.js';
+import prisma from '../db/prisma.js';
 
 const router = Router();
 
 router.get('/', async (_req, res) => {
   try {
-    await pool.query('SELECT 1');
+    await prisma.$queryRaw`SELECT 1`;
     res.json({
       status: 'ok',
       service: 'hotel-web-app-backend',

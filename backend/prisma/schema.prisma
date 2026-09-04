@@ -1,0 +1,81 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum BookingStatus {
+  confirmed
+  cancelled
+}
+
+model Room {
+  id             String    @id @default(uuid()) @db.Uuid
+  name           String    @unique
+  capacity       Int
+  pricePerNight  Int       @map("price_per_night")
+  description    String    @default("")
+  createdAt      DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  bookings       Booking[]
+
+  @@map("rooms")
+}
+
+model Booking {
+  id               String        @id @default(uuid()) @db.Uuid
+  confirmationCode String        @unique @map("confirmation_code")
+  roomId           String        @map("room_id") @db.Uuid
+  checkIn          DateTime      @map("check_in") @db.Date
+  checkOut         DateTime      @map("check_out") @db.Date
+  adults           Int
+  children         Int           @default(0)
+  infants          Int           @default(0)
+  pricePerNight    Int           @map("price_per_night")
+  totalPrice       Int           @map("total_price")
+  guestName        String        @map("guest_name")
+  guestEmail       String        @map("guest_email")
+  status           BookingStatus @default(confirmed)
+  createdAt        DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  room        Room          @relation(fields: [roomId], references: [id])
+  dinnerPlans DinnerPlan[]
+  review      Review?
+
+  @@index([roomId, checkIn, checkOut], map: "bookings_room_dates_idx")
+  @@map("bookings")
+}
+
+model DinnerPlan {
+  id          String   @id @default(uuid()) @db.Uuid
+  bookingId   String   @map("booking_id") @db.Uuid
+  day         DateTime @db.Date
+  wantsDinner Boolean  @default(false) @map("wants_dinner")
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@unique([bookingId, day])
+  @@map("dinner_plans")
+}
+
+model Review {
+  bookingId String   @id @map("booking_id") @db.Uuid
+  rating    Int
+  comment   String
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
+model AdminUser {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  @@map("admin_users")
+}
