@@ -65,3 +65,9 @@ export const updateDinners = (confirmationCode, dinners) =>
     method: 'PUT',
     body: JSON.stringify({ dinners }),
   });
+
+export const createReview = (payload) =>
+  request('/api/reviews', {
+    method: 'POST',
+    body: JSON.stringify(payload),
+  });

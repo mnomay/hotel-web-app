@@ -83,7 +83,7 @@ hotel-web-app/
 - Seeded admin accounts (password for both: `admin123`):
   - `admin@hotel.local`
   - `manager@hotel.local`
-- Seeded confirmation codes for demos: `HTL-PAST01` (checked out), `HTL-NOW001` (checked in), `HTL-FUTR01` (confirmed), `HTL-CANC01` (cancelled).
+- Seeded confirmation codes for demos: `HTL-PAST01` (checked out, already reviewed), `HTL-DONE01` (checked out, ready for review), `HTL-NOW001` (checked in), `HTL-FUTR01` (confirmed), `HTL-CANC01` (cancelled).
 - Booking statuses: `confirmed` → `checked_in` → `checked_out`, or `cancelled` before check-in. Guest cancel is only allowed while `confirmed`.
 
 ### Schema relationships

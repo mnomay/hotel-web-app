@@ -78,6 +78,8 @@ async function main() {
 
   const pastCheckIn = formatDate(addDays(today, -10));
   const pastCheckOut = formatDate(addDays(today, -7));
+  const reviewReadyCheckIn = formatDate(addDays(today, -20));
+  const reviewReadyCheckOut = formatDate(addDays(today, -17));
   const currentCheckIn = formatDate(addDays(today, -1));
   const currentCheckOut = formatDate(addDays(today, 2));
   const futureCheckIn = formatDate(addDays(today, 14));
@@ -107,6 +109,23 @@ async function main() {
         comment:
           'Beautiful stay — quiet garden and excellent breakfast nearby.',
         createdAt: toDateOnly(formatDate(addDays(today, -6))),
+      },
+    },
+    {
+      confirmationCode: 'HTL-DONE01',
+      room: roomsByName['Courtyard Suite'],
+      checkIn: reviewReadyCheckIn,
+      checkOut: reviewReadyCheckOut,
+      adults: 1,
+      children: 0,
+      infants: 0,
+      guestName: 'Morgan Blake',
+      guestEmail: 'morgan.blake@example.com',
+      status: 'checked_out',
+      dinners: {
+        [reviewReadyCheckIn]: false,
+        [formatDate(addDays(today, -19))]: true,
+        [formatDate(addDays(today, -18))]: true,
       },
     },
     {

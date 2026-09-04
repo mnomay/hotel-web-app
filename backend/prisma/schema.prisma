@@ -64,7 +64,7 @@ model DinnerPlan {
 
 model Review {
   bookingId String   @id @map("booking_id") @db.Uuid
-  rating    Int
+  rating    Float
   comment   String
   createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
 
