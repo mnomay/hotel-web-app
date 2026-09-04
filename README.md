@@ -124,7 +124,54 @@ App: [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` → bac
 6. **Overview** — see seeded bars; open a booking  
 7. **Check-in / out** — mark with date (defaults today)  
 8. **Dinners** — today shows `HTL-NOW001` when seeded dinner is on  
-9. **Reviews** — filter Latest / Good / Average / Bad; date filter includes `HTL-PAST01`
+9. **Reviews** — filter Latest / Good / Average / Bad; date filter includes `HTL-PAST01`  
+10. **Settings** — view email; change password (then seed again if you want `admin123` back)
+
+## Fresh install (verify from a clean machine)
+
+```bash
+# Prerequisites: Node 22+, PostgreSQL, npm 10+
+git clone <repo-url> hotel-web-app && cd hotel-web-app
+# or unzip the submission archive and cd into it
+
+createdb hotel_web_app   # skip if the DB already exists
+
+cd backend
+cp .env.example .env     # adjust DATABASE_URL if needed
+npm install
+npm run db:migrate
+npm run db:seed
+npm run dev              # http://localhost:3001
+
+# new terminal
+cd frontend
+npm install
+npm run dev              # http://localhost:5173
+```
+
+Confirm health at `http://localhost:3001/api/health`, then run through the smoke checklist above.
+
+## Package for submission (no `node_modules`)
+
+From the project root (parent of `backend/` and `frontend/`):
+
+```bash
+# macOS / Linux — zip without dependencies, secrets, or git metadata
+cd ..
+zip -r hotel-web-app-submission.zip hotel-web-app \
+  -x "hotel-web-app/**/node_modules/*" \
+  -x "hotel-web-app/**/dist/*" \
+  -x "hotel-web-app/**/.env" \
+  -x "hotel-web-app/**/.env.local" \
+  -x "hotel-web-app/.git/*" \
+  -x "hotel-web-app/**/.DS_Store"
+
+# Optional: confirm the archive is clean (keeps backend/.env.example)
+unzip -l hotel-web-app-submission.zip | grep -E 'node_modules|/\.env$' || echo "OK: no node_modules or .env secrets in zip"
+unzip -l hotel-web-app-submission.zip | grep '\.env.example' || echo "WARN: missing .env.example"
+```
+
+Include `README.md`, `backend/.env.example`, Prisma migrations, and lockfiles. Receivers run the **Fresh install** steps above.
 
 ## Project structure
 
@@ -136,5 +183,7 @@ hotel-web-app/
 │   └── .env.example
 ├── frontend/         # React 18 + Tailwind
 │   └── src/
+├── .gitignore
+├── .nvmrc            # Node 22
 └── README.md
 ```

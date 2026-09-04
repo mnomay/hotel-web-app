@@ -1,8 +1,19 @@
+# Dependencies & build
 node_modules/
 dist/
 build/
+.vite/
+coverage/
+
+# Secrets & local env
 .env
+.env.*
+!.env.example
+
+# OS / editor / logs
 .DS_Store
 *.log
-coverage/
-.vite/
+*.swp
+.idea/
+.vscode/
+*.pem
