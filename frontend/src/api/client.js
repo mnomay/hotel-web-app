@@ -127,9 +127,17 @@ export const checkOutAdminBooking = (confirmationCode, date) =>
 
 export const getAdminDinners = () => request('/api/admin/dinners');
 
-export const getAdminReviews = ({ sort = 'latest', from = '', to = '' } = {}) => {
+export const getAdminReviews = ({
+  sort = 'latest',
+  from = '',
+  to = '',
+  page = 1,
+  limit = 5,
+} = {}) => {
   const params = new URLSearchParams();
   params.set('sort', sort);
+  params.set('page', String(page));
+  params.set('limit', String(limit));
   if (from) params.set('from', from);
   if (to) params.set('to', to);
   return request(`/api/admin/reviews?${params.toString()}`);

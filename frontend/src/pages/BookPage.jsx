@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { createBooking, getAvailability } from '../api/client';
+import FormError from '../components/FormError';
 import { useToast } from '../components/ToastProvider';
 import { getRoomImage } from '../data/roomImages';
 import { addDaysIso, formatDisplayDate, todayIso } from '../utils/dates';
@@ -64,6 +65,7 @@ function BookingModal({
   const [guestName, setGuestName] = useState('');
   const [guestEmail, setGuestEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const occupancy = adults + children;
   const overCapacity = occupancy > room.capacity;
@@ -87,6 +89,22 @@ function BookingModal({
     event.preventDefault();
     if (overCapacity || adults < 1) return;
 
+    const name = guestName.trim();
+    const email = guestEmail.trim();
+    if (!name) {
+      setFormError('Enter your full name');
+      return;
+    }
+    if (!email) {
+      setFormError('Enter your email');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      setFormError('Enter a valid email address');
+      return;
+    }
+
+    setFormError('');
     setLoading(true);
 
     try {
@@ -97,13 +115,13 @@ function BookingModal({
         adults,
         children,
         infants,
-        guestName,
-        guestEmail,
+        guestName: name,
+        guestEmail: email,
       });
       showToast('Booking confirmed');
       onBooked(booking);
     } catch (err) {
-      showToast(err.message || 'Could not complete booking', 'error');
+      setFormError(err.message || 'Could not complete booking');
     } finally {
       setLoading(false);
     }
@@ -236,7 +254,8 @@ function BookingModal({
               </button>
             </>
           ) : (
-            <form onSubmit={submitBooking} className="mt-5 space-y-4">
+            <form noValidate onSubmit={submitBooking} className="mt-5 space-y-4">
+              <FormError message={formError} />
               <p className="text-sm text-gray-500">
                 {formatDisplayDate(checkIn)} – {formatDisplayDate(checkOut)} ·{' '}
                 {guestSummary({ adults, children, infants })} · {formatMoney(totalPrice)}
@@ -246,9 +265,11 @@ function BookingModal({
                   Full name
                 </span>
                 <input
-                  required
                   value={guestName}
-                  onChange={(e) => setGuestName(e.target.value)}
+                  onChange={(e) => {
+                    setGuestName(e.target.value);
+                    if (formError) setFormError('');
+                  }}
                   className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none focus:border-gray-900"
                   placeholder="Alex Rivera"
                 />
@@ -258,10 +279,12 @@ function BookingModal({
                   Email
                 </span>
                 <input
-                  required
                   type="email"
                   value={guestEmail}
-                  onChange={(e) => setGuestEmail(e.target.value)}
+                  onChange={(e) => {
+                    setGuestEmail(e.target.value);
+                    if (formError) setFormError('');
+                  }}
                   className="w-full rounded-xl border border-gray-300 bg-white px-3 py-3 text-sm outline-none focus:border-gray-900"
                   placeholder="alex@example.com"
                 />
@@ -271,7 +294,10 @@ function BookingModal({
               </button>
               <button
                 type="button"
-                onClick={() => setModalStep(1)}
+                onClick={() => {
+                  setFormError('');
+                  setModalStep(1);
+                }}
                 className="w-full rounded-xl border border-gray-300 py-3.5 text-sm font-semibold text-gray-900 hover:bg-gray-50"
               >
                 Back
@@ -285,7 +311,6 @@ function BookingModal({
 }
 
 function BookPage() {
-  const { showToast } = useToast();
   const minCheckIn = todayIso();
   const [checkIn, setCheckIn] = useState(minCheckIn);
   const [checkOut, setCheckOut] = useState(addDaysIso(minCheckIn, 2));
@@ -297,6 +322,7 @@ function BookPage() {
   const [confirmation, setConfirmation] = useState(null);
   const [loading, setLoading] = useState(false);
   const [showResults, setShowResults] = useState(false);
+  const [formError, setFormError] = useState('');
 
   const resetFlow = () => {
     setShowResults(false);
@@ -306,10 +332,22 @@ function BookPage() {
     setResultNights(0);
     setSelectedRoom(null);
     setConfirmation(null);
+    setFormError('');
   };
 
   const searchRooms = async (event) => {
     event.preventDefault();
+
+    if (!checkIn || !checkOut) {
+      setFormError('Select check-in and check-out dates');
+      return;
+    }
+    if (checkOut <= checkIn) {
+      setFormError('Check-out must be after check-in');
+      return;
+    }
+
+    setFormError('');
     setLoading(true);
     setSelectedRoom(null);
     setConfirmation(null);
@@ -322,7 +360,7 @@ function BookPage() {
       setResultNights(data.nights);
       setShowResults(true);
     } catch (err) {
-      showToast(err.message || 'Could not load available rooms', 'error');
+      setFormError(err.message || 'Could not load available rooms');
     } finally {
       setLoading(false);
     }
@@ -332,15 +370,17 @@ function BookPage() {
     <main className="mx-auto max-w-6xl px-4 pb-20 pt-8 sm:px-6">
       <div className="mb-8 text-center">
         <h1 className="text-2xl font-semibold text-gray-900 sm:text-3xl">
-          Book a stay at Willow House
+          Book a stay at Willow Hotel
         </h1>
         <p className="mt-2 text-gray-500">3 rooms · no account needed</p>
       </div>
 
       <form
+        noValidate
         onSubmit={searchRooms}
-        className="mx-auto max-w-3xl rounded-3xl border border-gray-200 bg-white p-4 shadow-search sm:p-5"
+        className="mx-auto max-w-3xl space-y-3 rounded-3xl border border-gray-200 bg-white p-4 shadow-search sm:p-5"
       >
+        <FormError message={formError} />
         <div className="grid gap-3 sm:grid-cols-[1fr_1fr_auto] sm:items-center">
           <label className="date-field">
             <span className="text-xs font-semibold uppercase tracking-wide text-gray-500">
@@ -348,13 +388,13 @@ function BookPage() {
             </span>
             <input
               type="date"
-              required
               min={minCheckIn}
               value={checkIn}
               onChange={(e) => {
                 const next = e.target.value;
                 setCheckIn(next);
                 if (checkOut <= next) setCheckOut(addDaysIso(next, 1));
+                if (formError) setFormError('');
               }}
             />
           </label>
@@ -365,10 +405,12 @@ function BookPage() {
             </span>
             <input
               type="date"
-              required
               min={addDaysIso(checkIn, 1)}
               value={checkOut}
-              onChange={(e) => setCheckOut(e.target.value)}
+              onChange={(e) => {
+                setCheckOut(e.target.value);
+                if (formError) setFormError('');
+              }}
             />
           </label>
 

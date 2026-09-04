@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { createReview } from '../api/client';
+import FormError from '../components/FormError';
 import { StarRatingDisplay, StarRatingInput } from '../components/StarRating';
 import { useToast } from '../components/ToastProvider';
 
@@ -10,26 +11,28 @@ function ReviewPage() {
   const [comment, setComment] = useState('');
   const [loading, setLoading] = useState(false);
   const [submitted, setSubmitted] = useState(null);
+  const [formError, setFormError] = useState('');
 
   const handleSubmit = async (event) => {
     event.preventDefault();
 
     const code = confirmationCode.trim().toUpperCase();
     if (!code) {
-      showToast('Enter a confirmation code', 'error');
+      setFormError('Enter a confirmation code');
       return;
     }
 
     if (!rating || rating < 0.5) {
-      showToast('Select a star rating', 'error');
+      setFormError('Select a star rating');
       return;
     }
 
     if (!comment.trim() || comment.trim().length < 3) {
-      showToast('Please write a short review comment', 'error');
+      setFormError('Please write a short review comment');
       return;
     }
 
+    setFormError('');
     setLoading(true);
 
     try {
@@ -42,7 +45,7 @@ function ReviewPage() {
       setConfirmationCode(review.confirmationCode);
       showToast('Review submitted');
     } catch (err) {
-      showToast(err.message || 'Could not submit review', 'error');
+      setFormError(err.message || 'Could not submit review');
     } finally {
       setLoading(false);
     }
@@ -53,6 +56,7 @@ function ReviewPage() {
     setConfirmationCode('');
     setRating(0);
     setComment('');
+    setFormError('');
   };
 
   return (
@@ -89,17 +93,21 @@ function ReviewPage() {
         </section>
       ) : (
         <form
+          noValidate
           onSubmit={handleSubmit}
           className="space-y-5 rounded-3xl border border-gray-200 bg-white p-5 shadow-search sm:p-6"
         >
+          <FormError message={formError} />
           <label className="block">
             <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
               Confirmation code
             </span>
             <input
-              required
               value={confirmationCode}
-              onChange={(e) => setConfirmationCode(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                setConfirmationCode(e.target.value.toUpperCase());
+                if (formError) setFormError('');
+              }}
               placeholder="HTL-XXXXXX"
               className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-base font-medium tracking-wide text-gray-900 outline-none focus:border-gray-900 focus:bg-white"
             />
@@ -109,7 +117,13 @@ function ReviewPage() {
             <legend className="mb-2 text-xs font-semibold uppercase tracking-wide text-gray-500">
               Rating
             </legend>
-            <StarRatingInput value={rating} onChange={setRating} />
+            <StarRatingInput
+              value={rating}
+              onChange={(next) => {
+                setRating(next);
+                if (formError) setFormError('');
+              }}
+            />
           </fieldset>
 
           <label className="block">
@@ -117,10 +131,12 @@ function ReviewPage() {
               Comment
             </span>
             <textarea
-              required
               rows={5}
               value={comment}
-              onChange={(e) => setComment(e.target.value)}
+              onChange={(e) => {
+                setComment(e.target.value);
+                if (formError) setFormError('');
+              }}
               placeholder="How was your stay?"
               className="w-full resize-y rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm text-gray-900 outline-none focus:border-gray-900 focus:bg-white"
             />

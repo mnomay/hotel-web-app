@@ -6,6 +6,7 @@ import {
   checkOutAdminBooking,
   getAdminBooking,
 } from '../../api/client';
+import FormError from '../../components/FormError';
 import { useToast } from '../../components/ToastProvider';
 import { formatDisplayDate, todayIso } from '../../utils/dates';
 import { formatMoney } from '../../utils/money';
@@ -41,10 +42,12 @@ function AdminBookingDetailPage() {
   const [cancelling, setCancelling] = useState(false);
   const [statusBusy, setStatusBusy] = useState(false);
   const [actionDate, setActionDate] = useState(() => todayIso());
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     let active = true;
     setLoading(true);
+    setFormError('');
 
     getAdminBooking(confirmationCode)
       .then((data) => {
@@ -53,10 +56,9 @@ function AdminBookingDetailPage() {
           setActionDate(todayIso());
         }
       })
-      .catch((err) => {
+      .catch(() => {
         if (active) {
           setBooking(null);
-          showToast(err.message || 'Booking not found', 'error');
         }
       })
       .finally(() => {
@@ -66,7 +68,7 @@ function AdminBookingDetailPage() {
     return () => {
       active = false;
     };
-  }, [confirmationCode, showToast]);
+  }, [confirmationCode]);
 
   const handleCancel = async () => {
     if (!booking || booking.status !== 'confirmed') return;
@@ -79,13 +81,14 @@ function AdminBookingDetailPage() {
     }
 
     setCancelling(true);
+    setFormError('');
     try {
       const updated = await cancelAdminBooking(booking.confirmationCode);
       setBooking(updated);
       showToast('Booking cancelled');
       navigate('/admin', { replace: false });
     } catch (err) {
-      showToast(err.message || 'Cancel failed', 'error');
+      setFormError(err.message || 'Cancel failed');
     } finally {
       setCancelling(false);
     }
@@ -93,13 +96,18 @@ function AdminBookingDetailPage() {
 
   const handleCheckIn = async () => {
     if (!booking || booking.status !== 'confirmed') return;
+    if (!actionDate) {
+      setFormError('Select a check-in date');
+      return;
+    }
+    setFormError('');
     setStatusBusy(true);
     try {
       const updated = await checkInAdminBooking(booking.confirmationCode, actionDate);
       setBooking(updated);
       showToast(`Checked in on ${formatDisplayDate(actionDate)}`);
     } catch (err) {
-      showToast(err.message || 'Check-in failed', 'error');
+      setFormError(err.message || 'Check-in failed');
     } finally {
       setStatusBusy(false);
     }
@@ -107,13 +115,18 @@ function AdminBookingDetailPage() {
 
   const handleCheckOut = async () => {
     if (!booking || booking.status !== 'checked_in') return;
+    if (!actionDate) {
+      setFormError('Select a check-out date');
+      return;
+    }
+    setFormError('');
     setStatusBusy(true);
     try {
       const updated = await checkOutAdminBooking(booking.confirmationCode, actionDate);
       setBooking(updated);
       showToast(`Checked out on ${formatDisplayDate(actionDate)}`);
     } catch (err) {
-      showToast(err.message || 'Check-out failed', 'error');
+      setFormError(err.message || 'Check-out failed');
     } finally {
       setStatusBusy(false);
     }
@@ -230,47 +243,58 @@ function AdminBookingDetailPage() {
         </dl>
 
         {(canCheckIn || canCheckOut) && (
-          <div className="mt-6 rounded-2xl border border-gray-200 bg-gray-50 p-4">
-            <h2 className="text-sm font-semibold text-gray-900">
-              {canCheckIn ? 'Check in guest' : 'Check out guest'}
-            </h2>
-            <p className="mt-1 text-xs text-gray-500">
-              Choose the date this action happened. Defaults to today.
-            </p>
-            <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-end">
+          <form
+            noValidate
+            onSubmit={(event) => {
+              event.preventDefault();
+              if (canCheckIn) handleCheckIn();
+              else handleCheckOut();
+            }}
+            className="mt-6 space-y-3 rounded-2xl border border-gray-200 bg-gray-50 p-4"
+          >
+            <FormError message={formError} />
+            <div>
+              <h2 className="text-sm font-semibold text-gray-900">
+                {canCheckIn ? 'Check in guest' : 'Check out guest'}
+              </h2>
+              <p className="mt-1 text-xs text-gray-500">
+                Choose the date this action happened. Defaults to today.
+              </p>
+            </div>
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
               <label className="block flex-1">
                 <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
                   Date
                 </span>
                 <input
                   type="date"
-                  required
                   value={actionDate}
-                  onChange={(e) => setActionDate(e.target.value)}
+                  onChange={(e) => {
+                    setActionDate(e.target.value);
+                    if (formError) setFormError('');
+                  }}
                   className="w-full rounded-xl border border-gray-200 bg-white px-3 py-2.5 text-sm outline-none focus:border-gray-900"
                 />
               </label>
               {canCheckIn ? (
                 <button
-                  type="button"
+                  type="submit"
                   disabled={statusBusy || !actionDate}
-                  onClick={handleCheckIn}
                   className="btn-primary sm:w-auto sm:min-w-[140px]"
                 >
                   {statusBusy ? 'Saving…' : 'Mark checked in'}
                 </button>
               ) : (
                 <button
-                  type="button"
+                  type="submit"
                   disabled={statusBusy || !actionDate}
-                  onClick={handleCheckOut}
                   className="btn-primary sm:w-auto sm:min-w-[140px]"
                 >
                   {statusBusy ? 'Saving…' : 'Mark checked out'}
                 </button>
               )}
             </div>
-          </div>
+          </form>
         )}
 
         <div className="mt-6">
@@ -300,7 +324,8 @@ function AdminBookingDetailPage() {
           )}
         </div>
 
-        <div className="mt-6 border-t border-gray-100 pt-5">
+        <div className="mt-6 space-y-3 border-t border-gray-100 pt-5">
+          {!canCheckIn && !canCheckOut ? <FormError message={formError} /> : null}
           {canCancel ? (
             <button
               type="button"

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getAdminOverview } from '../../api/client';
-import { useToast } from '../../components/ToastProvider';
+import FormError from '../../components/FormError';
 import { addDaysIso, formatDisplayDate, todayIso } from '../../utils/dates';
 
 const DAY_WIDTH = 72;
@@ -32,7 +32,6 @@ function dayLabel(isoDate) {
 
 function AdminHomePage() {
   const navigate = useNavigate();
-  const { showToast } = useToast();
   const [from, setFrom] = useState(() => todayIso());
   const [to, setTo] = useState(() => addDaysIso(todayIso(), 13));
   const [applied, setApplied] = useState(() => ({
@@ -41,6 +40,7 @@ function AdminHomePage() {
   }));
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     let active = true;
@@ -48,12 +48,15 @@ function AdminHomePage() {
 
     getAdminOverview(applied.from, applied.to)
       .then((overview) => {
-        if (active) setData(overview);
+        if (active) {
+          setData(overview);
+          setFormError('');
+        }
       })
       .catch((err) => {
         if (active) {
           setData(null);
-          showToast(err.message || 'Failed to load overview', 'error');
+          setFormError(err.message || 'Failed to load overview');
         }
       })
       .finally(() => {
@@ -63,7 +66,7 @@ function AdminHomePage() {
     return () => {
       active = false;
     };
-  }, [applied, showToast]);
+  }, [applied]);
 
   const today = todayIso();
   const gridWidth = useMemo(() => {
@@ -74,6 +77,7 @@ function AdminHomePage() {
   const applyRange = (nextFrom, nextTo) => {
     setFrom(nextFrom);
     setTo(nextTo);
+    setFormError('');
     setApplied({ from: nextFrom, to: nextTo });
   };
 
@@ -83,10 +87,15 @@ function AdminHomePage() {
 
   const handleSubmit = (event) => {
     event.preventDefault();
-    if (from > to) {
-      showToast('Start date must be on or before end date', 'error');
+    if (!from || !to) {
+      setFormError('Select a start and end date');
       return;
     }
+    if (from > to) {
+      setFormError('Start date must be on or before end date');
+      return;
+    }
+    setFormError('');
     setApplied({ from, to });
   };
 
@@ -125,36 +134,44 @@ function AdminHomePage() {
       </div>
 
       <form
+        noValidate
         onSubmit={handleSubmit}
-        className="mt-5 flex flex-col gap-3 rounded-2xl border border-gray-200 bg-white p-3 sm:flex-row sm:items-end sm:p-4"
+        className="mt-5 space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4"
       >
-        <label className="block flex-1">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            From
-          </span>
-          <input
-            type="date"
-            required
-            value={from}
-            onChange={(e) => setFrom(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:bg-white"
-          />
-        </label>
-        <label className="block flex-1">
-          <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
-            To
-          </span>
-          <input
-            type="date"
-            required
-            value={to}
-            onChange={(e) => setTo(e.target.value)}
-            className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:bg-white"
-          />
-        </label>
-        <button type="submit" className="btn-primary sm:w-auto sm:min-w-[120px]">
-          Apply
-        </button>
+        <FormError message={formError} />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-end">
+          <label className="block flex-1">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              From
+            </span>
+            <input
+              type="date"
+              value={from}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                if (formError) setFormError('');
+              }}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:bg-white"
+            />
+          </label>
+          <label className="block flex-1">
+            <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500">
+              To
+            </span>
+            <input
+              type="date"
+              value={to}
+              onChange={(e) => {
+                setTo(e.target.value);
+                if (formError) setFormError('');
+              }}
+              className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:bg-white"
+            />
+          </label>
+          <button type="submit" className="btn-primary sm:w-auto sm:min-w-[120px]">
+            Apply
+          </button>
+        </div>
       </form>
 
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-gray-600">

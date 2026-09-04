@@ -19,7 +19,7 @@ function PublicLayout() {
             className="shrink-0 text-lg font-bold tracking-tight text-[#ff385c] sm:text-xl"
             onClick={() => setMenuOpen(false)}
           >
-            Willow House
+            Willow Hotel
           </Link>
 
           <nav className="hidden items-center gap-1 md:flex md:gap-2">

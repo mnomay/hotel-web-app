@@ -1,6 +1,6 @@
 # Hotel Web App
 
-Public booking site and admin tool for a small hotel (**3 rooms**): Willow House.
+Public booking site and admin tool for a small hotel (**3 rooms**): Willow Hotel.
 
 Guests can book, manage dinners/cancel, and leave a review — no account required.  
 Staff use a cookie-authenticated admin area for occupancy, dinners, reviews, and check-in/out.
@@ -65,11 +65,17 @@ App: [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` → bac
 
 | Code | Use |
 |------|-----|
-| `HTL-PAST01` | Checked out + already reviewed |
-| `HTL-DONE01` | Checked out, ready for a review |
-| `HTL-NOW001` | Checked in (current stay) |
-| `HTL-FUTR01` | Confirmed future stay |
-| `HTL-CANC01` | Cancelled |
+| `HTL-GOOD01` / `HTL-GOOD02` / `HTL-PAST01` | Checked out + **good** reviews (5 / 4.5 / 4) |
+| `HTL-AVG001` / `HTL-AVG002` | Checked out + **average** reviews (3 / 2.5) |
+| `HTL-BAD001` / `HTL-BAD002` | Checked out + **bad** reviews (1.5 / 0.5) |
+| `HTL-DONE01` | Checked out, ready for a review (no review yet) |
+| `HTL-NOW001` | Checked in Courtyard (Sep 3–6); dinner today & tomorrow |
+| `HTL-GARD06` | Confirmed Garden (Sep 6–8) |
+| `HTL-ROOF08` | Confirmed Rooftop (Sep 8–11, nights through Sep 10) |
+| `HTL-FUTR01` | Confirmed future stay (mid-Sept) |
+| `HTL-CANC01` | Cancelled (does not block availability) |
+
+Seed dates are anchored to **2026-09-04**. From today through ~Sep 10 only **one** room is occupied at a time, so **≥2 rooms stay free** for booking tests. Past stays cover all three rooms with dinner plans and the review bands above.
 
 ## Public routes
 
@@ -123,8 +129,8 @@ App: [http://localhost:5173](http://localhost:5173) (Vite proxies `/api` → bac
 5. **Admin login** — `admin@hotel.local` / `admin123`  
 6. **Overview** — see seeded bars; open a booking  
 7. **Check-in / out** — mark with date (defaults today)  
-8. **Dinners** — today shows `HTL-NOW001` when seeded dinner is on  
-9. **Reviews** — filter Latest / Good / Average / Bad; date filter includes `HTL-PAST01`  
+8. **Dinners** — today & tomorrow include `HTL-NOW001` headcount  
+9. **Reviews** — filter Latest / Good / Average / Bad (seed has all three bands)  
 10. **Settings** — view email; change password (then seed again if you want `admin123` back)
 
 ## Fresh install (verify from a clean machine)
@@ -172,6 +178,19 @@ unzip -l hotel-web-app-submission.zip | grep '\.env.example' || echo "WARN: miss
 ```
 
 Include `README.md`, `backend/.env.example`, Prisma migrations, and lockfiles. Receivers run the **Fresh install** steps above.
+
+## Future enhancements
+
+Ideas beyond the current delivery — not implemented yet:
+
+- **Payment integration** — collect deposits or full stay payment at booking time (card checkout), and record payment status on the booking.
+- **Refund flow** — when a booking is cancelled, calculate and process refunds (full or partial) according to simple cancellation rules.
+- **Email notifications** — send transactional email on key events (booking confirmed, cancelled, check-in reminder, review invitation).
+- **Email verification before confirmation** — require the guest to verify their email (e.g. magic link or code) before the booking is fully confirmed.
+- **Room CRUD + image gallery** — admin UI to create/update/delete rooms and manage a gallery of photos per room (instead of static local images).
+- **Forgot password** — let admins reset their password via email link when they cannot sign in.
+- **Reporting / exports** — admin reports for occupancy, revenue, and dinner counts, with CSV/PDF export.
+- **Audit log** — record who performed sensitive admin actions (cancel, check-in/out, password change, dinner edits) with timestamps.
 
 ## Project structure
 

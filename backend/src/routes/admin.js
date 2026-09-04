@@ -50,7 +50,9 @@ router.get('/reviews', async (req, res) => {
     const sort = req.query.sort ? String(req.query.sort) : 'latest';
     const from = req.query.from ? String(req.query.from) : undefined;
     const to = req.query.to ? String(req.query.to) : undefined;
-    const reviews = await getAdminReviews({ sort, from, to });
+    const page = req.query.page ? String(req.query.page) : '1';
+    const limit = req.query.limit ? String(req.query.limit) : '5';
+    const reviews = await getAdminReviews({ sort, from, to, page, limit });
     return res.json(reviews);
   } catch (error) {
     return sendServiceError(res, error, 'Failed to load reviews');

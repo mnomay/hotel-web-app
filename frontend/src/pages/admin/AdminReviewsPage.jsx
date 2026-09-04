@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { getAdminReviews } from '../../api/client';
+import FormError from '../../components/FormError';
 import { StarRatingDisplay } from '../../components/StarRating';
-import { useToast } from '../../components/ToastProvider';
 import { addDaysIso, formatDisplayDate, todayIso } from '../../utils/dates';
+
+const PAGE_SIZE = 5;
 
 const SORT_OPTIONS = [
   { value: 'latest', label: 'Latest' },
@@ -24,7 +26,6 @@ function formatSubmittedAt(iso) {
 }
 
 function AdminReviewsPage() {
-  const { showToast } = useToast();
   const [sort, setSort] = useState('latest');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
@@ -32,22 +33,27 @@ function AdminReviewsPage() {
     sort: 'latest',
     from: '',
     to: '',
+    page: 1,
   });
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [formError, setFormError] = useState('');
 
   useEffect(() => {
     let active = true;
     setLoading(true);
 
-    getAdminReviews(applied)
+    getAdminReviews({ ...applied, limit: PAGE_SIZE })
       .then((result) => {
-        if (active) setData(result);
+        if (active) {
+          setData(result);
+          setFormError('');
+        }
       })
       .catch((err) => {
         if (active) {
           setData(null);
-          showToast(err.message || 'Failed to load reviews', 'error');
+          setFormError(err.message || 'Failed to load reviews');
         }
       })
       .finally(() => {
@@ -57,21 +63,23 @@ function AdminReviewsPage() {
     return () => {
       active = false;
     };
-  }, [applied, showToast]);
+  }, [applied]);
 
   const handleSubmit = (event) => {
     event.preventDefault();
     if (from && to && from > to) {
-      showToast('Start date must be on or before end date', 'error');
+      setFormError('Start date must be on or before end date');
       return;
     }
-    setApplied({ sort, from, to });
+    setFormError('');
+    setApplied({ sort, from, to, page: 1 });
   };
 
   const clearDates = () => {
     setFrom('');
     setTo('');
-    setApplied((current) => ({ ...current, from: '', to: '' }));
+    setFormError('');
+    setApplied((current) => ({ ...current, from: '', to: '', page: 1 }));
   };
 
   const setLast30Days = () => {
@@ -79,7 +87,17 @@ function AdminReviewsPage() {
     const start = addDaysIso(end, -30);
     setFrom(start);
     setTo(end);
-    setApplied((current) => ({ ...current, from: start, to: end }));
+    setFormError('');
+    setApplied((current) => ({
+      ...current,
+      from: start,
+      to: end,
+      page: 1,
+    }));
+  };
+
+  const goToPage = (nextPage) => {
+    setApplied((current) => ({ ...current, page: nextPage }));
   };
 
   return (
@@ -90,9 +108,11 @@ function AdminReviewsPage() {
       </p>
 
       <form
+        noValidate
         onSubmit={handleSubmit}
         className="mt-5 space-y-3 rounded-2xl border border-gray-200 bg-white p-3 sm:p-4"
       >
+        <FormError message={formError} />
         <div className="flex flex-wrap gap-2">
           {SORT_OPTIONS.map((option) => (
             <button
@@ -100,7 +120,12 @@ function AdminReviewsPage() {
               type="button"
               onClick={() => {
                 setSort(option.value);
-                setApplied((current) => ({ ...current, sort: option.value }));
+                setFormError('');
+                setApplied((current) => ({
+                  ...current,
+                  sort: option.value,
+                  page: 1,
+                }));
               }}
               className={[
                 'rounded-lg px-3 py-2 text-sm font-medium transition',
@@ -122,7 +147,10 @@ function AdminReviewsPage() {
             <input
               type="date"
               value={from}
-              onChange={(e) => setFrom(e.target.value)}
+              onChange={(e) => {
+                setFrom(e.target.value);
+                if (formError) setFormError('');
+              }}
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:bg-white"
             />
           </label>
@@ -133,7 +161,10 @@ function AdminReviewsPage() {
             <input
               type="date"
               value={to}
-              onChange={(e) => setTo(e.target.value)}
+              onChange={(e) => {
+                setTo(e.target.value);
+                if (formError) setFormError('');
+              }}
               className="w-full rounded-xl border border-gray-200 bg-gray-50 px-3 py-2.5 text-sm outline-none focus:border-gray-900 focus:bg-white"
             />
           </label>
@@ -162,7 +193,7 @@ function AdminReviewsPage() {
 
       {loading ? (
         <p className="mt-10 text-center text-sm text-gray-500">Loading reviews…</p>
-      ) : !data || data.reviews.length === 0 ? (
+      ) : !data || data.total === 0 ? (
         <div className="mt-8 rounded-3xl border border-dashed border-gray-200 bg-white px-6 py-12 text-center">
           <p className="text-sm font-medium text-gray-900">No reviews found</p>
           <p className="mt-1 text-sm text-gray-500">
@@ -173,12 +204,15 @@ function AdminReviewsPage() {
       ) : (
         <div className="mt-6 space-y-3">
           <p className="text-xs text-gray-400">
-            {data.count} review{data.count === 1 ? '' : 's'}
+            {data.total} review{data.total === 1 ? '' : 's'}
             {data.from || data.to
               ? ` · ${data.from ? formatDisplayDate(data.from) : '…'} – ${
                   data.to ? formatDisplayDate(data.to) : '…'
                 }`
               : ' · all dates'}
+            {data.totalPages > 1
+              ? ` · page ${data.page} of ${data.totalPages}`
+              : ''}
           </p>
 
           {data.reviews.map((review) => (
@@ -215,6 +249,30 @@ function AdminReviewsPage() {
               </p>
             </article>
           ))}
+
+          {data.totalPages > 1 ? (
+            <div className="flex items-center justify-between gap-3 pt-2">
+              <button
+                type="button"
+                disabled={data.page <= 1}
+                onClick={() => goToPage(data.page - 1)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 disabled:opacity-40"
+              >
+                Previous
+              </button>
+              <p className="text-sm text-gray-500">
+                Page {data.page} of {data.totalPages}
+              </p>
+              <button
+                type="button"
+                disabled={data.page >= data.totalPages}
+                onClick={() => goToPage(data.page + 1)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm font-semibold text-gray-800 disabled:opacity-40"
+              >
+                Next
+              </button>
+            </div>
+          ) : null}
         </div>
       )}
     </main>

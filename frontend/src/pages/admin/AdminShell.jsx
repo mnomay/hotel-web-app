@@ -72,7 +72,7 @@ function AdminShell() {
             to="/admin"
             className="shrink-0 truncate text-base font-bold tracking-tight text-[#ff385c] sm:text-xl"
           >
-            Willow House
+            Willow Hotel
           </Link>
 
           <div

@@ -40,7 +40,16 @@ const orderByForFilter = (filter) => {
   return [{ createdAt: 'desc' }];
 };
 
-export const getAdminReviews = async ({ sort = 'latest', from, to } = {}) => {
+const DEFAULT_PAGE_SIZE = 5;
+const MAX_PAGE_SIZE = 50;
+
+export const getAdminReviews = async ({
+  sort = 'latest',
+  from,
+  to,
+  page = 1,
+  limit = DEFAULT_PAGE_SIZE,
+} = {}) => {
   // Accept legacy best/worst aliases
   let normalized = String(sort || 'latest').toLowerCase();
   if (normalized === 'best') normalized = 'good';
@@ -66,6 +75,12 @@ export const getAdminReviews = async ({ sort = 'latest', from, to } = {}) => {
     throw httpError(400, 'INVALID_DATE_RANGE', 'from must be on or before to');
   }
 
+  const pageNum = Math.max(1, Number.parseInt(page, 10) || 1);
+  const limitNum = Math.min(
+    MAX_PAGE_SIZE,
+    Math.max(1, Number.parseInt(limit, 10) || DEFAULT_PAGE_SIZE),
+  );
+
   const where = {};
 
   const rating = ratingWhereForFilter(normalized);
@@ -77,9 +92,17 @@ export const getAdminReviews = async ({ sort = 'latest', from, to } = {}) => {
     if (to) where.createdAt.lt = addDays(toDateOnly(to), 1);
   }
 
+  const whereClause = Object.keys(where).length > 0 ? where : undefined;
+  const total = await prisma.review.count({ where: whereClause });
+  const totalPages = Math.max(1, Math.ceil(total / limitNum));
+  const safePage = Math.min(pageNum, totalPages);
+  const skip = (safePage - 1) * limitNum;
+
   const reviews = await prisma.review.findMany({
-    where: Object.keys(where).length > 0 ? where : undefined,
+    where: whereClause,
     orderBy: orderByForFilter(normalized),
+    skip,
+    take: limitNum,
     include: {
       booking: {
         select: {
@@ -103,6 +126,10 @@ export const getAdminReviews = async ({ sort = 'latest', from, to } = {}) => {
     sort: normalized,
     from: from || null,
     to: to || null,
+    page: safePage,
+    limit: limitNum,
+    total,
+    totalPages,
     count: reviews.length,
     bands: {
       good: '4–5',

@@ -26,9 +26,17 @@ const eachNight = (checkIn, checkOut) => {
   return nights;
 };
 
+/** Mark selected nights for dinner; others default false. */
+const dinnerMap = (nights, yesNights = []) => {
+  const yes = new Set(yesNights);
+  return Object.fromEntries(nights.map((night) => [night, yes.has(night)]));
+};
+
 async function main() {
-  const today = new Date();
-  today.setUTCHours(0, 0, 0, 0);
+  // Anchor seed calendar to 2026-09-04 so demo stays line up with “through Sept 10”
+  // regardless of when seed is re-run.
+  const today = toDateOnly('2026-09-04');
+  const d = (offset) => formatDate(addDays(today, offset));
 
   await prisma.review.deleteMany();
   await prisma.dinnerPlan.deleteMany();
@@ -73,118 +81,252 @@ async function main() {
     data: { email: 'admin@hotel.local', passwordHash },
   });
 
-  const pastCheckIn = formatDate(addDays(today, -10));
-  const pastCheckOut = formatDate(addDays(today, -7));
-  const reviewReadyCheckIn = formatDate(addDays(today, -20));
-  const reviewReadyCheckOut = formatDate(addDays(today, -17));
-  const currentCheckIn = formatDate(addDays(today, -1));
-  const currentCheckOut = formatDate(addDays(today, 2));
-  const futureCheckIn = formatDate(addDays(today, 14));
-  const futureCheckOut = formatDate(addDays(today, 17));
-  const cancelledCheckIn = formatDate(addDays(today, 5));
-  const cancelledCheckOut = formatDate(addDays(today, 8));
+  /*
+   * Occupancy from today (2026-09-04) through ~Sept 10:
+   * at most ONE room active so ≥2 rooms stay free for booking tests.
+   *
+   *   Courtyard  Sep 3 → 6   checked_in  (covers today + dinner today/tomorrow)
+   *   Garden     Sep 6 → 8   confirmed
+   *   Rooftop    Sep 8 → 11  confirmed  (nights through Sept 10)
+   *
+   * Past stays: checked_out history + good / average / bad reviews.
+   * HTL-DONE01: checked_out, no review (smoke: leave a review).
+   * HTL-CANC01: cancelled (does not block availability).
+   */
 
   const bookings = [
+    // —— Past history + reviews (all rooms, all rating bands) ——
     {
-      confirmationCode: 'HTL-PAST01',
+      confirmationCode: 'HTL-GOOD01',
       room: roomsByName['Garden Room'],
-      checkIn: pastCheckIn,
-      checkOut: pastCheckOut,
+      checkIn: d(-28),
+      checkOut: d(-25),
       adults: 2,
       children: 0,
       infants: 0,
       guestName: 'Alex Rivera',
       guestEmail: 'alex.rivera@example.com',
       status: 'checked_out',
-      checkedInAt: pastCheckIn,
-      checkedOutAt: pastCheckOut,
-      dinners: {
-        [pastCheckIn]: true,
-        [formatDate(addDays(today, -9))]: true,
-        [formatDate(addDays(today, -8))]: false,
-      },
+      checkedInAt: d(-28),
+      checkedOutAt: d(-25),
+      dinnerYes: [d(-28), d(-27)],
       review: {
         rating: 5,
-        comment:
-          'Beautiful stay — quiet garden and excellent breakfast nearby.',
-        createdAt: toDateOnly(formatDate(addDays(today, -6))),
+        comment: 'Beautiful stay — quiet garden and excellent service.',
+        createdAt: toDateOnly(d(-24)),
       },
     },
     {
-      confirmationCode: 'HTL-DONE01',
+      confirmationCode: 'HTL-GOOD02',
       room: roomsByName['Courtyard Suite'],
-      checkIn: reviewReadyCheckIn,
-      checkOut: reviewReadyCheckOut,
+      checkIn: d(-24),
+      checkOut: d(-21),
+      adults: 2,
+      children: 1,
+      infants: 0,
+      guestName: 'Priya Shah',
+      guestEmail: 'priya.shah@example.com',
+      status: 'checked_out',
+      checkedInAt: d(-24),
+      checkedOutAt: d(-21),
+      dinnerYes: [d(-23), d(-22)],
+      review: {
+        rating: 4.5,
+        comment: 'Spacious suite, great for a short family trip.',
+        createdAt: toDateOnly(d(-20)),
+      },
+    },
+    {
+      confirmationCode: 'HTL-AVG001',
+      room: roomsByName['Rooftop Loft'],
+      checkIn: d(-22),
+      checkOut: d(-19),
+      adults: 1,
+      children: 0,
+      infants: 0,
+      guestName: 'Chris Patel',
+      guestEmail: 'chris.patel@example.com',
+      status: 'checked_out',
+      checkedInAt: d(-22),
+      checkedOutAt: d(-19),
+      dinnerYes: [d(-21)],
+      review: {
+        rating: 3,
+        comment: 'Nice views, but the loft felt a bit warm at night.',
+        createdAt: toDateOnly(d(-18)),
+      },
+    },
+    {
+      confirmationCode: 'HTL-AVG002',
+      room: roomsByName['Garden Room'],
+      checkIn: d(-18),
+      checkOut: d(-15),
+      adults: 2,
+      children: 0,
+      infants: 1,
+      guestName: 'Taylor Kim',
+      guestEmail: 'taylor.kim@example.com',
+      status: 'checked_out',
+      checkedInAt: d(-18),
+      checkedOutAt: d(-15),
+      dinnerYes: [d(-18), d(-17), d(-16)],
+      review: {
+        rating: 2.5,
+        comment: 'Decent room; check-in was slow and Wi‑Fi was spotty.',
+        createdAt: toDateOnly(d(-14)),
+      },
+    },
+    {
+      confirmationCode: 'HTL-BAD001',
+      room: roomsByName['Courtyard Suite'],
+      checkIn: d(-16),
+      checkOut: d(-13),
+      adults: 1,
+      children: 0,
+      infants: 0,
+      guestName: 'Riley Quinn',
+      guestEmail: 'riley.quinn@example.com',
+      status: 'checked_out',
+      checkedInAt: d(-16),
+      checkedOutAt: d(-13),
+      dinnerYes: [],
+      review: {
+        rating: 1.5,
+        comment: 'Noisy courtyard and the AC barely worked.',
+        createdAt: toDateOnly(d(-12)),
+      },
+    },
+    {
+      confirmationCode: 'HTL-BAD002',
+      room: roomsByName['Rooftop Loft'],
+      checkIn: d(-14),
+      checkOut: d(-11),
+      adults: 2,
+      children: 0,
+      infants: 0,
+      guestName: 'Jamie Ortega',
+      guestEmail: 'jamie.ortega@example.com',
+      status: 'checked_out',
+      checkedInAt: d(-14),
+      checkedOutAt: d(-11),
+      dinnerYes: [d(-14)],
+      review: {
+        rating: 0.5,
+        comment: 'Worst stay — dirty bathroom and late housekeeping.',
+        createdAt: toDateOnly(d(-10)),
+      },
+    },
+    {
+      confirmationCode: 'HTL-PAST01',
+      room: roomsByName['Garden Room'],
+      checkIn: d(-10),
+      checkOut: d(-7),
+      adults: 2,
+      children: 0,
+      infants: 0,
+      guestName: 'Noah Bennett',
+      guestEmail: 'noah.bennett@example.com',
+      status: 'checked_out',
+      checkedInAt: d(-10),
+      checkedOutAt: d(-7),
+      dinnerYes: [d(-10), d(-9)],
+      review: {
+        rating: 4,
+        comment: 'Lovely garden terrace — would book again.',
+        createdAt: toDateOnly(d(-6)),
+      },
+    },
+    // Checked out, no review yet (smoke: submit a review)
+    {
+      confirmationCode: 'HTL-DONE01',
+      room: roomsByName['Rooftop Loft'],
+      checkIn: d(-6),
+      checkOut: d(-3),
       adults: 1,
       children: 0,
       infants: 0,
       guestName: 'Morgan Blake',
       guestEmail: 'morgan.blake@example.com',
       status: 'checked_out',
-      checkedInAt: reviewReadyCheckIn,
-      checkedOutAt: reviewReadyCheckOut,
-      dinners: {
-        [reviewReadyCheckIn]: false,
-        [formatDate(addDays(today, -19))]: true,
-        [formatDate(addDays(today, -18))]: true,
-      },
+      checkedInAt: d(-6),
+      checkedOutAt: d(-3),
+      dinnerYes: [d(-5), d(-4)],
     },
+    // —— Near term: only Courtyard occupied (2 rooms free) ——
     {
       confirmationCode: 'HTL-NOW001',
       room: roomsByName['Courtyard Suite'],
-      checkIn: currentCheckIn,
-      checkOut: currentCheckOut,
-      adults: 1,
+      checkIn: d(-1), // Sep 3
+      checkOut: d(2), // Sep 6
+      adults: 2,
       children: 0,
       infants: 0,
       guestName: 'Jordan Lee',
       guestEmail: 'jordan.lee@example.com',
       status: 'checked_in',
-      checkedInAt: currentCheckIn,
-      dinners: {
-        [currentCheckIn]: true,
-        [formatDate(today)]: true,
-        [formatDate(addDays(today, 1))]: false,
-      },
+      checkedInAt: d(-1),
+      dinnerYes: [d(-1), d(0), d(1)], // yesterday, today, tomorrow
+    },
+    // —— Staggered confirmed stays through Sept 10 (still ≤1 room busy) ——
+    {
+      confirmationCode: 'HTL-GARD06',
+      room: roomsByName['Garden Room'],
+      checkIn: d(2), // Sep 6
+      checkOut: d(4), // Sep 8
+      adults: 2,
+      children: 1,
+      infants: 0,
+      guestName: 'Elena Vargas',
+      guestEmail: 'elena.vargas@example.com',
+      status: 'confirmed',
+      dinnerYes: [d(2), d(3)],
     },
     {
-      confirmationCode: 'HTL-FUTR01',
+      confirmationCode: 'HTL-ROOF08',
       room: roomsByName['Rooftop Loft'],
-      checkIn: futureCheckIn,
-      checkOut: futureCheckOut,
+      checkIn: d(4), // Sep 8
+      checkOut: d(7), // Sep 11 — nights Sep 8, 9, 10
       adults: 2,
       children: 0,
       infants: 1,
       guestName: 'Sam Okonkwo',
       guestEmail: 'sam.okonkwo@example.com',
       status: 'confirmed',
-      dinners: {
-        [futureCheckIn]: false,
-        [formatDate(addDays(today, 15))]: true,
-        [formatDate(addDays(today, 16))]: true,
-      },
+      dinnerYes: [d(4), d(6)], // Sep 8 & Sep 10
     },
+    // Further-out confirmed (after Sept 10 window)
+    {
+      confirmationCode: 'HTL-FUTR01',
+      room: roomsByName['Garden Room'],
+      checkIn: d(14),
+      checkOut: d(17),
+      adults: 1,
+      children: 0,
+      infants: 0,
+      guestName: 'Harper Diaz',
+      guestEmail: 'harper.diaz@example.com',
+      status: 'confirmed',
+      dinnerYes: [d(15), d(16)],
+    },
+    // Cancelled — does not block the room
     {
       confirmationCode: 'HTL-CANC01',
-      room: roomsByName['Garden Room'],
-      checkIn: cancelledCheckIn,
-      checkOut: cancelledCheckOut,
+      room: roomsByName['Rooftop Loft'],
+      checkIn: d(2),
+      checkOut: d(5),
       adults: 1,
       children: 0,
       infants: 0,
       guestName: 'Casey Nguyen',
       guestEmail: 'casey.nguyen@example.com',
       status: 'cancelled',
-      dinners: {
-        [cancelledCheckIn]: false,
-        [formatDate(addDays(today, 6))]: false,
-        [formatDate(addDays(today, 7))]: false,
-      },
+      dinnerYes: [],
     },
   ];
 
   for (const booking of bookings) {
     const nights = eachNight(booking.checkIn, booking.checkOut);
+    const dinners = dinnerMap(nights, booking.dinnerYes);
     const totalPrice = booking.room.pricePerNight * nights.length;
 
     const created = await prisma.booking.create({
@@ -210,7 +352,7 @@ async function main() {
         dinnerPlans: {
           create: nights.map((night) => ({
             day: toDateOnly(night),
-            wantsDinner: Boolean(booking.dinners?.[night]),
+            wantsDinner: Boolean(dinners[night]),
           })),
         },
         ...(booking.review
@@ -232,6 +374,9 @@ async function main() {
 
   console.log('Seed completed successfully');
   console.log('Admin login: admin@hotel.local / admin123');
+  console.log(
+    'Near-term occupancy: only 1 room busy at a time through Sep 10 (2+ free).',
+  );
 }
 
 main()

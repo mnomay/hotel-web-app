@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { cancelBooking, getBooking, updateDinners } from '../api/client';
+import FormError from '../components/FormError';
 import { useToast } from '../components/ToastProvider';
 import { getRoomImage } from '../data/roomImages';
 import { formatDisplayDate, todayIso } from '../utils/dates';
@@ -69,6 +70,8 @@ function ManagePage() {
   const [dinnerPage, setDinnerPage] = useState(1);
   const [loading, setLoading] = useState(false);
   const [savingDinners, setSavingDinners] = useState(false);
+  const [formError, setFormError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   const stayEnded = useMemo(() => {
     if (!booking) return false;
@@ -120,13 +123,16 @@ function ManagePage() {
     event.preventDefault();
     setLoading(true);
     setBooking(null);
+    setActionError('');
 
     const normalizedCode = code.trim().toUpperCase();
     if (!normalizedCode) {
       setLoading(false);
-      showToast('Enter a confirmation code', 'error');
+      setFormError('Enter a confirmation code');
       return;
     }
+
+    setFormError('');
 
     try {
       const data = await getBooking(normalizedCode);
@@ -139,7 +145,7 @@ function ManagePage() {
         err.message?.includes('<!DOCTYPE') || err.message?.includes('Cannot GET')
           ? 'Booking not found'
           : err.message || 'Could not find that booking';
-      showToast(message, 'error');
+      setFormError(message);
     } finally {
       setLoading(false);
     }
@@ -153,6 +159,7 @@ function ManagePage() {
     if (!confirmed) return;
 
     setLoading(true);
+    setActionError('');
 
     try {
       const data = await cancelBooking(booking.confirmationCode);
@@ -160,7 +167,7 @@ function ManagePage() {
       setDinnerDraft(data.dinnerPlans.map((plan) => ({ ...plan })));
       showToast('Booking cancelled');
     } catch (err) {
-      showToast(err.message || 'Could not cancel booking', 'error');
+      setActionError(err.message || 'Could not cancel booking');
     } finally {
       setLoading(false);
     }
@@ -170,6 +177,7 @@ function ManagePage() {
     if (!booking || !canEditDinners) return;
 
     setSavingDinners(true);
+    setActionError('');
 
     try {
       const data = await updateDinners(booking.confirmationCode, dinnerDraft);
@@ -177,7 +185,7 @@ function ManagePage() {
       setDinnerDraft(data.dinnerPlans.map((plan) => ({ ...plan })));
       showToast('Dinner plans saved');
     } catch (err) {
-      showToast(err.message || 'Could not save dinner plans', 'error');
+      setActionError(err.message || 'Could not save dinner plans');
     } finally {
       setSavingDinners(false);
     }
@@ -195,18 +203,22 @@ function ManagePage() {
       </div>
 
       <form
+        noValidate
         onSubmit={lookupBooking}
-        className="rounded-3xl border border-gray-200 bg-white p-4 shadow-search sm:p-5"
+        className="space-y-3 rounded-3xl border border-gray-200 bg-white p-4 shadow-search sm:p-5"
       >
+        <FormError message={formError} />
         <label className="block">
           <span className="mb-1.5 block text-xs font-semibold uppercase tracking-wide text-gray-500">
             Confirmation code
           </span>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <input
-              required
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
+              onChange={(e) => {
+                setCode(e.target.value.toUpperCase());
+                if (formError) setFormError('');
+              }}
               placeholder="HTL-XXXXXX"
               className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-3 text-base font-medium tracking-wide text-gray-900 outline-none focus:border-gray-900 focus:bg-white"
             />
@@ -223,6 +235,8 @@ function ManagePage() {
 
       {booking ? (
         <section className="mt-10 space-y-6">
+          <FormError message={actionError} />
+
           <article className="overflow-hidden rounded-3xl border border-gray-200 bg-white">
             <div className="relative h-48 bg-gray-100 sm:h-56">
               <img
@@ -360,6 +374,7 @@ function ManagePage() {
                               wantsDinner: nextValue,
                             };
                             setDinnerDraft(next);
+                            if (actionError) setActionError('');
                           }}
                         />
                       </div>
